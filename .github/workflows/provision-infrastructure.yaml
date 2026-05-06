@@ -23,6 +23,10 @@ jobs:
   provision:
     # runner label - ubuntu-latest lets use use the free github ubuntu runners on the latest ubuntu version
     runs-on: ubuntu-latest 
+    # specify which environment to work from and get variables/secrets from
+    environment: production
+    # set a timeout to make sure job doesn't stall or get stuck
+    timeout-minutes: 30
     # specify what ouputs are needed out of this job
     outputs:
       server_ip: ${{ steps.get_ip.outputs.server_ip }}  # look at the get_ip step in the outputs section to get the ip
