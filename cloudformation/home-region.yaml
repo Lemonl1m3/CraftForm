@@ -66,6 +66,7 @@ Parameters:
 # and the necessary infrastructure for the CraftForm bot to operate in the home region
 #--------------------------------------------------------------------------------------------------------------------
 
+# -----------------------------------------OIDC PROVIDER-----------------------------------------
 Resources:
   # OIDC PROVIDER - allows GitHub Actions to authenticate with AWS using OIDC tokens rather than secret access keys, which is more secure and eliminates the need to manage long-lived credentials for GitHub Actions in AWS. This OIDC provider will be used in the trust policy of the IAM role that GitHub Actions will assume when deploying to the home region.
   GithubOIDCProvider:
@@ -202,3 +203,18 @@ Resources:
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
  
+
+
+  # ------------------------------------------S3 STATE BUCKET------------------------------------------
+
+  # ------------------------------------------DYNAMODB TABLES------------------------------------------
+
+  # -------------------------------------------SECRET MANGER-------------------------------------------
+
+  # -------------------------------------------SSM PARAMETERS------------------------------------------
+
+  # --------------------------------------------API GATEWAY--------------------------------------------
+
+  # -----------------------------------------LAMBDA FUNCTIONS------------------------------------------
+
+  # ------------------------------------------RESOURCE TRIGGER-----------------------------------------
