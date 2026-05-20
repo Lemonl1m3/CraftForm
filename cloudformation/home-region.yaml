@@ -473,7 +473,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn  # execution role for the Lambda function
       Code: 
         S3Bucket: "craftform-releases"
-        S3Key: "lambda/operations.zip"
+        S3Key: "lambda-operations/operations.zip"
 
 
 
