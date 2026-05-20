@@ -435,27 +435,23 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn  # execution role for the Lambda function
       Code: 
         ZipFile: |
+          import json
+          import urllib3
           def handler(event, context):
-              #------------------INJECTED VARIABLES-----------------
-              envVars = event["ResourceProperties"]
-              api_url = envVars["ApiGatewayUrl"]
-              role_arn = envVars["GithubActionsRoleArn"]
-              github_username = envVars["GitHubUsername"]
-              discord_app_id = envVars["DiscordAppId"]
-              #----------------------ACTUAL CODE--------------------
-
-              print(f"API Gateway URL: {api_url}")
-              print(f"GitHub Actions Role ARN: {role_arn}")
-              print(f"GitHub Username: {github_username}")
-              print(f"Discord App ID: {discord_app_id}")
-              #-------------------RETURN STATUS--------------------
-              return {
-                  "Status": "SUCCESS",
-                  "PhysicalResourceId": "craftform-startup",
-                  "Data": {
-                      "ApiGatewayUrl": api_url
-                  }
-              }
+            def handler(event, context):
+            http = urllib3.PoolManager()
+            response = {
+                "Status": "SUCCESS",
+                "PhysicalResourceId": "craftform-startup",
+                "StackId": event["StackId"],
+                "RequestId": event["RequestId"],
+                "LogicalResourceId": event["LogicalResourceId"]
+            }
+            http.request(
+                "PUT",
+                event["ResponseURL"],
+                body=json.dumps(response)
+            )
 
   OperationFunction:
     Type: AWS::Lambda::Function
