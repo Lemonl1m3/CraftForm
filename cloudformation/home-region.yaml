@@ -377,10 +377,8 @@ Resources:
       Name: "CraftFormDiscordAPI"
       Description: "API Gateway for handling Discord interactions with the CraftForm Discord bot."
       Tags:
-        - Key: "Project"
-          Value: "craftForm"
-        - Key: "Environment"
-          Value: "HomeRegion"
+        Project: "craftForm"
+        Environment: "HomeRegion"
       ProtocolType: "HTTP"  # Use HTTP API for lower latency and simpler setup
 
   # INTEGRATION - what connects the Gateway to the resource (Lambda function)
