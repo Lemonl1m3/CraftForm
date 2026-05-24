@@ -1,3 +1,11 @@
+#╔══════════════════════════════════════════════════════════════════════════════╗
+#║                           ⛏ CraftForm ⛏                                    ║
+#╠══════════════════════════════════════════════════════════════════════════════╣
+#║  STARTUP LAMBDA  ::  cloudformation_api.py                                   ║
+#║  Handles the CloudFormation Custom Resource response.                        ║
+#║  Signals deployment success or failure back to CloudFormation.               ║
+#╚══════════════════════════════════════════════════════════════════════════════╝
+
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Develops and provisions the CraftForm home region (home base) that all infrastructure and resources are deployed/managed from. This also 
@@ -405,52 +413,23 @@ Resources:
           Value: "craftForm"
         - Key: "Environment"
           Value: "HomeRegion"
+
+      # Variables
+      Environment:
+        Variables:
+          GithubUsername: !Ref GitHubUsername
+          ApiGatewayUrl: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com"
+          GithubActionsRoleArn: !GetAtt GithubActionsRole.Arn
+          DiscordAppId: !Ref DiscordAppId
+          GithubPAT: !Ref GitHubPersonalAccessToken
+
       Timeout: 60  # set a longer timeout for the startup function
       Runtime: "python3.12"  # runtime for the Lambda function
       Handler: "index.handler"  # handler for the Lambda function
       Role: !GetAtt LambdaExecutionRole.Arn  # execution role for the Lambda function
       Code: 
-        ZipFile: |
-          import json
-          import urllib3
-
-          def handler(event, context):
-              http = urllib3.PoolManager()
-              
-              props = event["ResourceProperties"]
-              api_url = props["ApiGatewayUrl"]
-              role_arn = props["GithubActionsRoleArn"]
-              github_username = props["GitHubUsername"]
-              discord_app_id = props["DiscordAppId"]
-              
-              print(f"API Gateway URL: {api_url}")
-              print(f"GitHub Username: {github_username}")
-              print(f"Discord App ID: {discord_app_id}")
-              
-              try:
-                  response = {
-                      "Status": "SUCCESS",
-                      "PhysicalResourceId": "craftform-startup",
-                      "StackId": event["StackId"],
-                      "RequestId": event["RequestId"],
-                      "LogicalResourceId": event["LogicalResourceId"]
-                  }
-              except Exception as e:
-                  response = {
-                      "Status": "FAILED",
-                      "Reason": str(e),
-                      "PhysicalResourceId": "craftform-startup",
-                      "StackId": event["StackId"],
-                      "RequestId": event["RequestId"],
-                      "LogicalResourceId": event["LogicalResourceId"]
-                  }
-              
-              http.request(
-                  "PUT",
-                  event["ResponseURL"],
-                  body=json.dumps(response),
-                  headers={"Content-Type": "application/json"}
-              )
+        S3Bucket: "craftform-releases"
+        S3Key: "lambda-startup/startup.zip"
 
   OperationFunction:
     Type: AWS::Lambda::Function
