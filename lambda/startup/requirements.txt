@@ -1,2 +1,3 @@
 # list of dependencies for the startup Lambda function
-PyNaCl
+
+PyNaCl # for encryption and decryption of secrets

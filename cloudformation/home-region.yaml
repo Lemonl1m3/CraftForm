@@ -1,5 +1,5 @@
 #╔══════════════════════════════════════════════════════════════════════════════╗
-#║                           ⛏ CraftForm ⛏                                    ║
+#║                               CraftForm                                      ║
 #╠══════════════════════════════════════════════════════════════════════════════╣
 #║  STARTUP LAMBDA  ::  cloudformation_api.py                                   ║
 #║  Handles the CloudFormation Custom Resource response.                        ║

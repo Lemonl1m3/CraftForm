@@ -1,5 +1,5 @@
 #╔══════════════════════════════════════════════════════════════════════════════╗
-#║                         ⛏ CraftForm ⛏                                      ║
+#║                              CraftForm                                       ║
 #╠══════════════════════════════════════════════════════════════════════════════╣
 #║  STARTUP LAMBDA  ::  index.py                                                ║
 #║  Entry point for the CloudFormation Custom Resource startup function.        ║
@@ -33,6 +33,8 @@ def handler(event, context):
         github_api.push_aws_secrets(github_pat, github_username, awsApi_url, gitRole_arn)   # push the AWS API Gateway URL and GitHub Actions Role ARN as encrypted secrets to the forked GitHub repo
 
         #-----------------------DISCORD INTEGRATION-----------------------
+
+
 
 
         #------------------------SUCCESS RESPONSE-------------------------

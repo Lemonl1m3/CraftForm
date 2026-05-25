@@ -1,5 +1,5 @@
 #╔══════════════════════════════════════════════════════════════════════════════╗
-#║                           ⛏ CraftForm ⛏                                    ║
+#║                               CraftForm                                      ║
 #╠══════════════════════════════════════════════════════════════════════════════╣
 #║  STARTUP LAMBDA  ::  github_api.py                                           ║
 #║  Handles all GitHub API interactions during initial deployment.              ║
