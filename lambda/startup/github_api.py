@@ -96,10 +96,9 @@ def enable_github_actions(github_pat, github_username):
 
     # make sure the request was succesful
     if gitResponse.status != 204:  # GitHub API returns a 204 No Content status code for a successful request to enable Actions
-        print(f"Failed to enable GitHub Actions: {gitResponse.status}")
-        print(f"Response: {gitResponse.data}")
+        raise Exception(f"Failed to enable GitHub Actions: {gitResponse.status} - {gitResponse.data} :(")
     else:
-        print("GitHub Actions enabled successfully")
+        print("GitHub Actions enabled :)")
 
 
 #========================================GITHUB IAM ROLE========================================
@@ -119,24 +118,20 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
 
     # make sure the public key request was successful
     if keyResponse.status != 200:
-        print(f"Failed to get public key: {keyResponse.status} :( ")
-        print(f"Response: {keyResponse.data}")
-        return
+        raise Exception(f"Failed to get public key: {keyResponse.status} - {keyResponse.data} :(")
     else:
         print("Public key came back :)")
 
     # extract the public key from the response
     # we capture both the public key and the key ID
     # Public Key - used to encrypt the secret before sending it to GitHub
-    # Key ID - included in the request to GitHub when pushing the secret
-    keyData = json.loads(keyResponse.data.decode("utf-8"))
+    # Key ID     - included in the request to GitHub when pushing the secret
+    keyData    = json.loads(keyResponse.data.decode("utf-8"))
     public_key = keyData["key"]  # the public key to encrypt secrets with
-    key_id = keyData["key_id"]  # the key ID to include in the request to GitHub when pushing secrets
+    key_id     = keyData["key_id"]  # the key ID to include in the request to GitHub when pushing secrets
 
-    # encrypt the GitHub secret (the AWS IAM Role ARN) with the public key
-    # We use the nacl library to perform the encryption - this is the encryption 
-    # #method GitHub requires for secrets. The encrypt_secret function handles the encryption 
-    # #process using the public key and returns the encrypted secret as a Base64-encoded string 
+    # encrypt the GitHub secret  with the public key
+    # GitHub requires that all secrets pushed to GitHub are encrypted with the Public Key captured
     encrypted_secret = encrypt_secret(public_key, role_arn)
 
     # push the encrypted secret to GitHub using the API - this will make the secret available in the forked repo
@@ -158,7 +153,6 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
 
     # make sure the request to push the secret was successful
     if gitResponse.status not in [201, 204]:  # GitHub API returns a 201 Created status code for a new secret and a 204 No Content status code for an updated secret
-        print(f"Failed to push secret: {gitResponse.status}")
-        print(f"Response: {gitResponse.data}")
+        raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("Secret placed :)")
