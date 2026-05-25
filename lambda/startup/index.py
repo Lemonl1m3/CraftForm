@@ -30,7 +30,7 @@ def handler(event, context):
 
         github_api.enable_github_actions(github_pat, github_username)  # enable GitHub Actions in the forked repo
 
-        github_api.push_aws_secrets(github_pat, github_username, awsApi_url, gitRole_arn)   # push the AWS API Gateway URL and GitHub Actions Role ARN as encrypted secrets to the forked GitHub repo
+        github_api.push_secretsTo_github(github_pat, github_username, awsApi_url, gitRole_arn)   # push the AWS API Gateway URL and GitHub Actions Role ARN as encrypted secrets to the forked GitHub repo
 
         #-----------------------DISCORD INTEGRATION-----------------------
 
