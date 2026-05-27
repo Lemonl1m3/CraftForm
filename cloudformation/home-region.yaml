@@ -91,7 +91,7 @@ Resources:
                 # only accept token with this audience claim - that the token is meant for AWS STS
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                 # only accept tokens from this specific repo - where the token is coming from
+                 # only accept tokens from this specific repo/user - where the token is coming from
                 token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubUsername}/craftForm:*"
       
       Policies:  # inline policies for the role - permissions that the role has
