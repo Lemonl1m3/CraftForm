@@ -58,6 +58,8 @@ def handler(event, context):
 
         discord_api.send_discord_api_url(discord_app_id, awsApi_url, discord_bot_token)   # set the API Gateway URL as the interactions endpoint in the Discord
 
+        discord_api.register_slash_commands(discord_app_id, discord_bot_token)   # register the slash commands with the Discord API
+
 
 
 
