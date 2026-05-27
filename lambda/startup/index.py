@@ -46,7 +46,7 @@ def handler(event, context):
 
         # store the GitHub forked repo URL into SSM parameter store 
         ssm.put_parameter(
-            Name      =  "/craftform/config/github_repo", 
+            Name      =  "/craftform/config/github/repo", 
             Value     =  f"{github_username}/CraftForm", 
             Type      =  "String", 
             Overwrite =  True

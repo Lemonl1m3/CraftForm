@@ -90,7 +90,7 @@ def enable_github_actions(github_pat, github_username):
 
         body=json.dumps({
             "enabled": True,  # enable GitHub Actions in the forked repo
-            "allowed_actions": "all",  # allow all actions in GitHub Actions
+            "allowed_actions": "all"  # allow all actions in GitHub Actions
         })
     )
 
