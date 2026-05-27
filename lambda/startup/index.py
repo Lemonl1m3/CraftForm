@@ -29,7 +29,7 @@ def handler(event, context):
     http = urllib3.PoolManager()    # create a new HTTP connection pool manager to make HTTP requests
     ssm  = boto3.client("ssm")   # create a AWS System Manager client to interact with SSM Parameter Store
     secretsManager = boto3.client("secretsmanager")   # create a AWS Secrets Manager client to interact with Secrets Manager
-    secrets = secretsManager.get_secret_value(SecretId="craftForm-secrets")   # get the secret value for the secret named "craftForm-secrets" from Secrets Manager
+    secrets = secretsManager.get_secret_value(SecretId="craftform-secrets")   # get the secret value for the secret named "craftform-secrets" from Secrets Manager
     secrets_dict = json.loads(secrets["SecretString"])   # the secret value is a JSON string
 
     #==================================API EXECUTION==================================

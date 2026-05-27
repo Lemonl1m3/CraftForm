@@ -71,10 +71,10 @@ Resources:
       # tags
       Tags:
         - Key: "Project"
-          Value: "craftForm"
+          Value: "craftform"
         - Key: "Environment"
           Value: "HomeRegion"
-      RoleName: "craftForm-github-actions"  # Name of the IAM role for GitHub Actions
+      RoleName: "craftform-github-actions"  # Name of the IAM role for GitHub Actions
       AssumeRolePolicyDocument:  # who is allowed to assume this role - GithubActions
         Version: "2012-10-17"
         Statement:  # list of statements in the trust policy
@@ -92,10 +92,10 @@ Resources:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
                  # only accept tokens from this specific repo/user - where the token is coming from
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubUsername}/craftForm:*"
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubUsername}/CraftForm:*"
       
       Policies:  # inline policies for the role - permissions that the role has
-        - PolicyName: "craftForm-github-actions-policy"
+        - PolicyName: "craftform-github-actions-policy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -154,11 +154,11 @@ Resources:
       # tags
       Tags:
         - Key: "Project"
-          Value: "craftForm"
+          Value: "craftform"
         - Key: "Environment"
           Value: "HomeRegion"
 
-      RoleName: "craftForm-lambda-execution"  # Name of the IAM role for Lambda execution
+      RoleName: "craftform-lambda-execution"  # Name of the IAM role for Lambda execution
       AssumeRolePolicyDocument:  # who is allowed to assume this role - Lambda service
         Version: "2012-10-17"
         Statement:
@@ -168,7 +168,7 @@ Resources:
             Action: "sts:AssumeRole"
 
       Policies:  # inline policies for the role - permissions that the Lambda functions will have when executing
-        - PolicyName: "craftForm-lambda-execution-policy"
+        - PolicyName: "craftform-lambda-execution-policy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -200,7 +200,7 @@ Resources:
       BucketName: !Sub "craftform-tf-state-${AWS::AccountId}"
       Tags:
         - Key: "Project"
-          Value: "craftForm"
+          Value: "craftform"
         - Key: "Environment"
           Value: "HomeRegion"
 
@@ -222,7 +222,7 @@ Resources:
       TableName: "craftform-tf-locks"
       Tags:
         - Key: "Project"
-          Value: "craftForm"
+          Value: "craftform"
         - Key: "Environment"
           Value: "HomeRegion"
       AttributeDefinitions:
@@ -239,11 +239,11 @@ Resources:
   CraftFormSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: "craftForm-secrets"
+      Name: "craftform-secrets"
       Description: "Secrets for CraftForm application, including Discord and GitHub credentials."
       Tags:
         - Key: "Project"
-          Value: "craftForm"
+          Value: "craftform"
         - Key: "Environment"
           Value: "HomeRegion"
 
@@ -259,7 +259,7 @@ Resources:
       Value: !Sub "${AWS::Region}"  # set the value of the home region parameter
       Description: "Home AWS region for CraftForm"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
       
   # GITHUB PARAMETERS:
@@ -271,7 +271,7 @@ Resources:
       Value: !Ref GitHubUsername
       Description: "GitHub username for CraftForm integration"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
 
 # DISCORD PARAMETERS:
@@ -283,7 +283,7 @@ Resources:
       Value: !Ref DiscordAppId
       Description: "Discord Application ID for CraftForm bot"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
   DiscordPublicKeyParameter:
     Type: AWS::SSM::Parameter
@@ -293,7 +293,7 @@ Resources:
       Value: !Ref DiscordPublicKey
       Description: "Discord Public Key for CraftForm bot"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
 
   # STATE FILE PARAMETERS:
@@ -305,7 +305,7 @@ Resources:
       Value: !Ref TerraformStateBucket
       Description: "Name of the S3 bucket for Terraform state files"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
   DynamoDBLocksTableParameter:
     Type: AWS::SSM::Parameter
@@ -315,7 +315,7 @@ Resources:
       Value: !Ref TerraformLocksTable
       Description: "Name of the DynamoDB table for Terraform locks"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
 
   # API GATEWAY PARAMETER:
@@ -327,7 +327,7 @@ Resources:
       Value: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com"  # construct the API Gateway endpoint URL using the API ID and region
       Description: "API Gateway endpoint URL for CraftForm bot interactions"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
 
   # IAM ROLE PARAMETERS:  
@@ -339,7 +339,7 @@ Resources:
       Value: !GetAtt GithubActionsRole.Arn  # get the ARN of the GitHub Actions role
       Description: "ARN of the IAM role for GitHub Actions to assume when deploying to the home region"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
   
   # SECRETS MANAGER PARAMETERS:
@@ -351,7 +351,7 @@ Resources:
       Value: !Ref CraftFormSecrets  # get the ARN of the Secrets Manager secret
       Description: "ARN of the Secrets Manager secret that holds CraftForm secrets"
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
 
   # --------------------------------------------API GATEWAY--------------------------------------------
@@ -361,7 +361,7 @@ Resources:
       Name: "CraftFormDiscordAPI"
       Description: "API Gateway for handling Discord interactions with the CraftForm Discord bot."
       Tags:
-        Project: "craftForm"
+        Project: "craftform"
         Environment: "HomeRegion"
       ProtocolType: "HTTP"  # Use HTTP API for lower latency and simpler setup
 
@@ -406,11 +406,11 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn: DiscordApiGateway  # ensure the API Gateway is created before the Lambda function because cloudformation can't infer this
     Properties:
-      FunctionName: "craftForm-startup-function"
+      FunctionName: "craftform-startup-function"
       Description: "Lambda function to perform startup tasks for CraftForm, such as forking craftForm repo, and registering commands to discord"
       Tags:
         - Key: "Project"
-          Value: "craftForm"
+          Value: "craftform"
         - Key: "Environment"
           Value: "HomeRegion"
 
@@ -438,7 +438,7 @@ Resources:
       Description: "Lambda function to handle operations for CraftForm, such as handling Discord interactions and executing Terraform commands"
       Tags:
         - Key: "Project"
-          Value: "craftForm"
+          Value: "craftform"
         - Key: "Environment"
           Value: "HomeRegion"
       Timeout: 30  # timeout for the operation function - basically just to trigger a workflow
