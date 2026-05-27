@@ -239,7 +239,7 @@ Resources:
   CraftFormSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: "craftform-secrets"
+      Name: "craftForm-secrets"
       Description: "Secrets for CraftForm application, including Discord and GitHub credentials."
       Tags:
         - Key: "Project"
@@ -247,7 +247,7 @@ Resources:
         - Key: "Environment"
           Value: "HomeRegion"
 
-      SecretString: !Sub '{"DiscordBotToken": "${DiscordBotToken}", "GitHubPersonalAccessToken": "${GitHubPersonalAccessToken}"}'
+      SecretString: !Sub '{"Discord-Bot-Token": "${DiscordBotToken}", "GitHub-PAT": "${GitHubPersonalAccessToken}"}'
 
   # -------------------------------------------SSM PARAMETERS------------------------------------------
   # HOME REGION PARAMETER
