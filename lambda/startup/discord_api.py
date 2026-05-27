@@ -11,8 +11,59 @@ import json
 
 #========================================INITIALIZATION========================================
 http = urllib3.PoolManager()    # create a new HTTP connection pool manager to make HTTP requests
+#=========================================SLASH COMMANDS========================================
+slash_commands = [
+    
+    # -------------------------------SERVER COMMAND--------------------------------
+    {
+        "name": "server",
+        "description": "Manage your CraftForm Servers",
+        "options": [
+            {
+                "name": "create",
+                "description": "Create a new CraftForm Server",
+                "type": 1,
+                "required": True
+            },
+            {
+                "name": "delete",
+                "description": "Delete a CraftForm Server",
+                "type": 1,
+                "required": True
+            },
+            {
+                "name": "start",
+                "description": "Start a CraftForm Server",
+                "type": 1,
+                "required": True
+            }
+        ]
+    },
 
-#========================================DISCORD API URL========================================
+    # -------------------------------TEMPLATE COMMAND--------------------------------
+    {
+        "name": "template",
+        "description": "Manage your CraftForm Templates",
+        "options": [
+            {
+                "name": "delete",
+                "description": "Delete a CraftForm Template",
+                "type": 1,
+                "required": True
+
+
+            },
+            {
+                "name": "create",
+                "description": "Create a new CraftForm Template",
+                "type": 1,
+                "required": True
+            }
+        ]
+    }
+]
+
+#========================================REGISTER API URL========================================
 def send_discord_api_url(discord_app_id, api_url, discord_bot_token):
 
     # send a post to the discord API to set the interactions endpoint to the API Gateway URL
@@ -35,3 +86,11 @@ def send_discord_api_url(discord_app_id, api_url, discord_bot_token):
         raise Exception(f"Failed to set Discord interactions endpoint: {discordResponse.status} - {discordResponse.data} :(")
     else:
         print("API Gateaway URL set on Discord application :)")
+
+#=====================================REGISTER SLASH COMMANDS=====================================
+def register_slash_commands(discord_app_id, discord_bot_token):
+
+    # register the slash commands with the Discord API
+
+    print("still a work in progress...")
+
