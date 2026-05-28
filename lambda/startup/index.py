@@ -21,7 +21,7 @@ def handler(event, context):
 
     awsApi_url      = os.environ["ApiGatewayUrl"]
     gitRole_arn     = os.environ["GithubActionsRoleArn"]
-    github_username = os.environ["GitHubUsername"]
+    github_username = os.environ["GithubUsername"]
     discord_app_id  = os.environ["DiscordAppId"]
     
     #==================================INITIALIZATION=================================

@@ -181,7 +181,7 @@ Resources:
                   - secretsmanager:GetSecretValue
                 Resource: 
                   - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*"  # allow access to SSM parameters under the craftform path
-                  - !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform/*"
+                  - !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform*"
 
               # allow logging to CloudWatch Logs for Lambda functions - create log group, log stream, and put log events
               - Effect: "Allow"
