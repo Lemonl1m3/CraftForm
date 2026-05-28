@@ -30,7 +30,21 @@ def encrypt_secret(public_key, secret):
 
 #========================================GITHUB FORKING========================================
 def fork_repo(github_pat, github_username):
+    # make a http GET request to ask Github if the repo already exists in the user's account
+    gitResponse = http.request(
+         "GET",
+         f"https://api.github.com/repos/{github_username}/CraftForm",
 
+         headers = {
+             "Authorization": f"token {github_pat}",
+             "Accept": "application/vnd.github.v3+json"
+        }
+    )
+    # if the repo already exists, skip the forking process
+    if gitResponse.status == 200:
+        print("Repo already forked :)")
+        return
+    
     # fork the CrafForm repo into the user's GitHub account using the Github API and provided PAT
     gitResponse = http.request(
 
