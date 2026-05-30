@@ -247,7 +247,7 @@ Resources:
         - Key: "Environment"
           Value: "HomeRegion"
 
-      SecretString: !Sub '{"Discord-Bot-Token": "${DiscordBotToken}", "GitHub-PAT": "${GitHubPersonalAccessToken}"}'
+      SecretString: !Sub '{"Discord-Bot-Token": "${DiscordBotToken}", "Github-PAT": "${GitHubPersonalAccessToken}"}'
 
   # -------------------------------------------SSM PARAMETERS------------------------------------------
   # HOME REGION PARAMETER

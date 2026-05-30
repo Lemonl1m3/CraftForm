@@ -17,26 +17,28 @@ import github_api
 # main handler function for the Lambda function - entry point for the Lambda
 def handler(event, context):
 
-    # ===============================INJECTED VARIABLES===============================
 
-    awsApi_url      = os.environ["ApiGatewayUrl"]
-    gitRole_arn     = os.environ["GithubActionsRoleArn"]
-    github_username = os.environ["GithubUsername"]
-    discord_app_id  = os.environ["DiscordAppId"]
-    
-    #==================================INITIALIZATION=================================
+    http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests | have to initalize outside the try statement so it can send Cloudformation responses in case of errors
 
-    http = urllib3.PoolManager()    # create a new HTTP connection pool manager to make HTTP requests
-    ssm  = boto3.client("ssm")   # create a AWS System Manager client to interact with SSM Parameter Store
-    secretsManager = boto3.client("secretsmanager")   # create a AWS Secrets Manager client to interact with Secrets Manager
-    secrets = secretsManager.get_secret_value(SecretId="craftform-secrets")   # get the secret value for the secret named "craftform-secrets" from Secrets Manager
-    secrets_dict = json.loads(secrets["SecretString"])   # the secret value is a JSON string
+    try:    # wrapping entire function in a try catch block because it makes it catches errors and also ensures when deleting cloudformation state, it deletes early
+        # ===============================INJECTED VARIABLES===============================
 
-    #==================================API EXECUTION==================================
-    
-    try:
-        #-----------------------GITHUB INTEGRATION------------------------
-        github_pat = secrets_dict["GitHub-PAT"]   # get the GitHub Personal Access Token from the secrets dictionary
+        awsApi_url      = os.environ["ApiGatewayUrl"]
+        gitRole_arn     = os.environ["GithubActionsRoleArn"]
+        github_username = os.environ["GithubUsername"]
+        discord_app_id  = os.environ["DiscordAppId"]
+        
+        #==================================INITIALIZATION=================================
+
+        
+        ssm  = boto3.client("ssm")   # create a AWS System Manager client to interact with SSM Parameter Store
+        secretsManager = boto3.client("secretsmanager")   # create a AWS Secrets Manager client to interact with Secrets Manager
+        secrets = secretsManager.get_secret_value(SecretId="craftform-secrets")   # get the secret value for the secret named "craftform-secrets" from Secrets Manager
+        secrets_dict = json.loads(secrets["SecretString"])   # the secret value is a JSON string
+
+
+        #================================GITHUB INTEGRATION===============================
+        github_pat = secrets_dict["Github-PAT"]   # get the GitHub Personal Access Token from the secrets dictionary
 
         github_api.fork_repo(github_pat, github_username)   # fork the CraftForm repo into the user's GitHub account and wait for the fork to be ready
 
@@ -52,7 +54,7 @@ def handler(event, context):
             Overwrite =  True
         )
 
-        #-----------------------DISCORD INTEGRATION-----------------------
+        #=================================DISCORD INTEGRATION=============================
         
         discord_bot_token = secrets_dict["Discord-Bot-Token"]   # get the bot token from Secret Manager
 
@@ -66,7 +68,7 @@ def handler(event, context):
 
 
 
-        #------------------------SUCCESS RESPONSE-------------------------
+        #=================================SUCCESS RESPONSE=============================
         response = {
             "Status": "SUCCESS",
             "PhysicalResourceId": "craftform-startup",
@@ -76,7 +78,7 @@ def handler(event, context):
         }
 
 
-
+    #====================================ERROR HANDLING================================
     # if any errors or failures happen - report to cloudformation with failure status and error message    
     except Exception as e:
         response = {
@@ -90,10 +92,11 @@ def handler(event, context):
     
     
 
-    #==================================CLOUDFORMATION RESPONSE=========================
-    http.request(
+    #=============================CLOUDFORMATION RESPONSE=============================
+
+    http.request(   # make an HTTP request to CloudFormation to report the end status
         "PUT",
-        event["ResponseURL"],
-        body=json.dumps(response),
+        event["ResponseURL"],   # cloudformation response URL is given in the event object when the Lambda is invoked by CloudFormation
+        body=json.dumps(response),  # one of the "2" status responses defined above - success or failure
         headers={"Content-Type": "application/json"}
     )
