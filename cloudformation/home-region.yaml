@@ -1,7 +1,7 @@
 #╔══════════════════════════════════════════════════════════════════════════════╗
 #║                               CraftForm                                      ║
 #╠══════════════════════════════════════════════════════════════════════════════╣
-#║  STARTUP LAMBDA  ::  cloudformation_api.py                                   ║
+#║  CLOUDFORMATION  ::  home-region.yaml                                        ║
 #║  Handles the CloudFormation Custom Resource response.                        ║
 #║  Signals deployment success or failure back to CloudFormation.               ║
 #╚══════════════════════════════════════════════════════════════════════════════╝
@@ -322,9 +322,9 @@ Resources:
   APIGatewayEndpointParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/api-gateway/endpoint"
+      Name: "/craftform/config/api-gateway/endpoint/discord"
       Type: "String"
-      Value: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com"  # construct the API Gateway endpoint URL using the API ID and region
+      Value: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord"  # construct the API Gateway endpoint URL using the API ID and region
       Description: "API Gateway endpoint URL for CraftForm bot interactions"
       Tags:
         Project: "craftform"
@@ -418,11 +418,9 @@ Resources:
       Environment:
         Variables:
           GithubUsername: !Ref GitHubUsername
-          ApiGatewayUrl: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com"
+          ApiGatewayUrl: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord"
           GithubActionsRoleArn: !GetAtt GithubActionsRole.Arn
           DiscordAppId: !Ref DiscordAppId
-          GithubPAT: !Ref GitHubPersonalAccessToken
-
       Timeout: 60  # set a longer timeout for the startup function
       Runtime: "python3.12"  # runtime for the Lambda function
       Handler: "index.handler"  # handler for the Lambda function
@@ -434,7 +432,7 @@ Resources:
   OperationFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: "craftForm-operation-function"
+      FunctionName: "craftform-operation-function"
       Description: "Lambda function to handle operations for CraftForm, such as handling Discord interactions and executing Terraform commands"
       Tags:
         - Key: "Project"
@@ -457,8 +455,3 @@ Resources:
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt StartUpFunction.Arn   # run this function after the stack is created
-      # Values to pass to the Lambda function
-      ApiGatewayUrl: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com"
-      GithubActionsRoleArn: !GetAtt GithubActionsRole.Arn
-      DiscordAppId: !Ref DiscordAppId
-      GitHubUsername: !Ref GitHubUsername
