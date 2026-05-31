@@ -6,6 +6,10 @@
 #║  Orchestrates GitHub and Discord setup on first deployment.                  ║
 #╚══════════════════════════════════════════════════════════════════════════════╝
 
+
+#==========================================================================================
+#                            IMPORTS AND DEPENDENCIES
+#==========================================================================================
 import urllib3
 import json
 import boto3
@@ -13,8 +17,10 @@ import os  # for accessing environment variables injected into the Lambda
 import discord_api
 import github_api
 
+#==========================================================================================
+#                            MAIN LAMBDA FUNCTION ENTRY POINT
+#==========================================================================================
 
-# main handler function for the Lambda function - entry point for the Lambda
 def handler(event, context):
 
 

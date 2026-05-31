@@ -5,14 +5,19 @@
 #║  Handles all Discord API interactions during initial deployment.             ║
 #║  Registers slash commands and sets the interactions endpoint.                ║
 #╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+#==========================================================================================
+#                            IMPORTS AND DEPENDENCIES
+#==========================================================================================
 import urllib3
 import json
 
-
-#========================================INITIALIZATION========================================
+#==========================================================================================
+#                          SETUP CLIENTS AND GLOBAL VARIABLES
+#==========================================================================================
 http = urllib3.PoolManager()    # create a new HTTP connection pool manager to make HTTP requests
 
-#=========================================SLASH COMMANDS========================================
 slash_commands = [
     
     # -------------------------------SERVER COMMAND--------------------------------
@@ -140,7 +145,10 @@ slash_commands = [
 
 ]
 
-#========================================REGISTER API URL========================================
+
+#==========================================================================================
+#                        DISCORD API SETUP AND INTERACTIONS
+#==========================================================================================
 def send_discord_api_url(discord_app_id, api_url, discord_bot_token):
 
     # send a post to the discord API to set the interactions endpoint to the API Gateway URL
@@ -164,7 +172,6 @@ def send_discord_api_url(discord_app_id, api_url, discord_bot_token):
     else:
         print("API Gateaway URL set on Discord application :)")
 
-#=====================================REGISTER SLASH COMMANDS=====================================
 def register_slash_commands(discord_app_id, discord_bot_token):
 
     # register the slash commands with the Discord API

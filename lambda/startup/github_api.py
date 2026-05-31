@@ -5,16 +5,25 @@
 #║  Handles all GitHub API interactions during initial deployment.              ║
 #║  Forks repo, enables Actions, and pushes AWS secrets.                        ║
 #╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+#==========================================================================================
+#                            IMPORTS AND DEPENDENCIES
+#==========================================================================================
 import time
 import json
 import urllib3
 from nacl import encoding, public
 from base64 import b64encode
 
-#========================================INITIALIZATION========================================
+#==========================================================================================
+#                           SETUP CLIENTS AND GLOBAL VARIABLES
+#==========================================================================================
 http = urllib3.PoolManager()    # create a new HTTP connection pool manager to make HTTP requests
 
-#===========================================ENCYPTION===========================================
+#==========================================================================================
+#                          HELPER FUNCTION TO ENCRYPT SECRETS FOR GITHUB
+#==========================================================================================
 def encrypt_secret(public_key, secret):
     # decode the Bse64-encoded key GitHub returns
     key = public.PublicKey(public_key.encode("utf-8"), encoding.Base64Encoder())
@@ -28,7 +37,9 @@ def encrypt_secret(public_key, secret):
     # encode the result as base64 so it can be sent as a string
     return b64encode(encrypted).decode("utf-8")
 
-#========================================GITHUB FORKING========================================
+#==========================================================================================
+#                          GITHUB API INTERACTIONS
+#==========================================================================================
 def fork_repo(github_pat, github_username):
     # make a http GET request to ask Github if the repo already exists in the user's account
     gitResponse = http.request(
@@ -87,8 +98,6 @@ def fork_repo(github_pat, github_username):
     else:
         raise Exception("Forking took too long :(")
 
-
-#========================================GITHUB ACTIONS========================================
 def enable_github_actions(github_pat, github_username):
 
     # enable GitHub Actions in the forked repo
@@ -114,8 +123,6 @@ def enable_github_actions(github_pat, github_username):
     else:
         print("GitHub Actions enabled :)")
 
-
-#========================================GITHUB IAM ROLE========================================
 def push_secretsTo_github(github_pat, github_username, role_arn):
 
     # get the public key from GitHub to encrypt the secret before pushing it to GitHub

@@ -1,14 +1,29 @@
+#╔══════════════════════════════════════════════════════════════════════════════╗
+#║                               CraftForm                                      ║
+#╠══════════════════════════════════════════════════════════════════════════════╣
+#║  OPERATIONS LAMBDA  ::  index.py                                             ║
+#║  Handles all incoming Discord interactions for CraftForm.                    ║
+#║  Verifies signatures, answers pings, and routes slash commands.              ║
+#╚══════════════════════════════════════════════════════════════════════════════╝
+
+#==========================================================================================
+#                            IMPORTS AND DEPENDENCIES
+#==========================================================================================
 import json
 import base64
 import boto3
 from nacl.signing import VerifyKey  #cryptographic library for verifying signatures
 from nacl.exceptions import BadSignatureError   # exception raised when signature verification fails
 
-#================================SETUP AWS CLIENTS AND CONFIGS==============================
+#==========================================================================================
+#                           SETUP CLIENTS AND GLOBAL VARIABLES
+#==========================================================================================
 ssm = boto3.client("ssm")   # create the AWS SSM Parameter store client
 discord_public_key = ssm.get_parameter(Name="/craftform/config/discord/public-key")["Parameter"]["Value"]   # get the Discord public key
 
-
+#==========================================================================================
+#                    VERIFY DISCORD SIGNATURE AND HANDLE INTERACTIONS
+#==========================================================================================
 def verify_signature(event, rawBody, public_key):
 
     signature = event["headers"]["x-signature-ed25519"]  # get the signature from the request headers
@@ -18,13 +33,16 @@ def verify_signature(event, rawBody, public_key):
         verify_key = VerifyKey(bytes.fromhex(public_key))  # convert the public key from a hex string to a PyNaCL VerifyKey object
         verify_key.verify(timestamp.encode() + rawBody.encode(), bytes.fromhex(signature))  # combine the timestamp and body, encode them, and verify the signature using the public key
 
-    except Exception as e:
+    except Exception as e:  # catch any exceptions because discord sends a bad ping request to the interactions endpoint when first setting up
         print("Error occurred while verifying signature:", str(e))
         return False  # signature verification failed
     return True
 
 
 
+#==========================================================================================
+#                                 DISCORD API INTERACTIONS
+#==========================================================================================
 def handler(event, context):
 
     print("Received event:", json.dumps(event))  # log the incoming event for debugging
