@@ -92,6 +92,7 @@ def handler(event, context):
             if subcommand == "start":
                 return {
                     "statusCode": 200,  # respond with a 200 status code to tell Discord the command was received and is being processed
+                    "headers": {"Content-Type": "application/json"},    # set the content type to JSON - needed for Discord to understand the response
                     "body": json.dumps({
                         "type": 4,  # respond immediately to the user
                         "data": {
