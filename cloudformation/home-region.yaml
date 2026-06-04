@@ -214,7 +214,7 @@ Resources:
         BlockPublicPolicy: true   # prevent public bucket policies from being applied to the bucket
         IgnorePublicAcls: true    # ignore any public ACLs
         RestrictPublicBuckets: true   # say no no to any public access to the bucket
-        
+
   # -------------------------------------------SECRET MANGER-------------------------------------------
   # holds sensitive information like the Discord bot token and Github PAT, which are needed for the
   # craftForm bot to operate
@@ -404,7 +404,7 @@ Resources:
           ApiGatewayUrl: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord"
           GithubActionsRoleArn: !GetAtt GithubActionsRole.Arn
           DiscordAppId: !Ref DiscordAppId
-      Timeout: 60  # set a longer timeout for the startup function
+      Timeout: 120  # set a longer timeout for the startup function
       Runtime: "python3.12"  # runtime for the Lambda function
       Handler: "index.handler"  # handler for the Lambda function
       Role: !GetAtt LambdaExecutionRole.Arn  # execution role for the Lambda function

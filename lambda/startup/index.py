@@ -26,47 +26,53 @@ def handler(event, context):
 
     http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests | have to initalize outside the try statement so it can send Cloudformation responses in case of errors
 
+
+
     try:    # wrapping entire function in a try catch block because it makes it catches errors and also ensures when deleting cloudformation state, it deletes early
-        # ===============================INJECTED VARIABLES===============================
 
-        awsApi_url      = os.environ["ApiGatewayUrl"]
-        gitRole_arn     = os.environ["GithubActionsRoleArn"]
-        github_username = os.environ["GithubUsername"]
-        discord_app_id  = os.environ["DiscordAppId"]
+
+        if event["RequestType"] != "Delete":   # make sure the startup script doesn't run on deletion
         
-        #==================================INITIALIZATION=================================
+            # ===============================INJECTED VARIABLES===============================
 
-        
-        ssm  = boto3.client("ssm")   # create a AWS System Manager client to interact with SSM Parameter Store
-        secretsManager = boto3.client("secretsmanager")   # create a AWS Secrets Manager client to interact with Secrets Manager
-        secrets = secretsManager.get_secret_value(SecretId="craftform-secrets")   # get the secret value for the secret named "craftform-secrets" from Secrets Manager
-        secrets_dict = json.loads(secrets["SecretString"])   # the secret value is a JSON string
+            awsApi_url      = os.environ["ApiGatewayUrl"]
+            gitRole_arn     = os.environ["GithubActionsRoleArn"]
+            github_username = os.environ["GithubUsername"]
+            discord_app_id  = os.environ["DiscordAppId"]
+            
+            #==================================INITIALIZATION=================================
+
+            
+            ssm  = boto3.client("ssm")   # create a AWS System Manager client to interact with SSM Parameter Store
+            secretsManager = boto3.client("secretsmanager")   # create a AWS Secrets Manager client to interact with Secrets Manager
+            secrets = secretsManager.get_secret_value(SecretId="craftform-secrets")   # get the secret value for the secret named "craftform-secrets" from Secrets Manager
+            secrets_dict = json.loads(secrets["SecretString"])   # the secret value is a JSON string
 
 
-        #================================GITHUB INTEGRATION===============================
-        github_pat = secrets_dict["Github-PAT"]   # get the GitHub Personal Access Token from the secrets dictionary
+            #================================GITHUB INTEGRATION===============================
+            github_pat = secrets_dict["Github-PAT"]   # get the GitHub Personal Access Token from the secrets dictionary
 
-        github_api.fork_repo(github_pat, github_username)   # fork the CraftForm repo into the user's GitHub account and wait for the fork to be ready
+            github_api.fork_repo(github_pat, github_username)   # fork the CraftForm repo into the user's GitHub account and wait for the fork to be ready
 
-        github_api.enable_github_actions(github_pat, github_username)  # enable GitHub Actions in the forked repo
+            github_api.enable_github_actions(github_pat, github_username)  # enable GitHub Actions in the forked repo
 
-        github_api.push_secretsTo_github(github_pat, github_username, gitRole_arn)   # push the AWS API Gateway URL and GitHub Actions Role ARN as encrypted secrets to the forked GitHub repo
+            github_api.push_secretsTo_github(github_pat, github_username, gitRole_arn)   # push the AWS API Gateway URL and GitHub Actions Role ARN as encrypted secrets to the forked GitHub repo
 
-        # store the GitHub forked repo URL into SSM parameter store 
-        ssm.put_parameter(
-            Name      =  "/craftform/config/github/repo", 
-            Value     =  f"{github_username}/CraftForm", 
-            Type      =  "String", 
-            Overwrite =  True
-        )
+            # store the GitHub forked repo URL into SSM parameter store 
+            ssm.put_parameter(
+                Name      =  "/craftform/config/github/repo", 
+                Value     =  f"{github_username}/CraftForm", 
+                Type      =  "String", 
+                Overwrite =  True
+            )
 
-        #=================================DISCORD INTEGRATION=============================
-        
-        discord_bot_token = secrets_dict["Discord-Bot-Token"]   # get the bot token from Secret Manager
+            #=================================DISCORD INTEGRATION=============================
+            
+            discord_bot_token = secrets_dict["Discord-Bot-Token"]   # get the bot token from Secret Manager
 
-        discord_api.send_discord_api_url(discord_app_id, awsApi_url, discord_bot_token)   # set the API Gateway URL as the interactions endpoint in the Discord
+            discord_api.send_discord_api_url(discord_app_id, awsApi_url, discord_bot_token)   # set the API Gateway URL as the interactions endpoint in the Discord
 
-        discord_api.register_slash_commands(discord_app_id, discord_bot_token)   # register the slash commands with the Discord API
+            discord_api.register_slash_commands(discord_app_id, discord_bot_token)   # register the slash commands with the Discord API
 
 
 
