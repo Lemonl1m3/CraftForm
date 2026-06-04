@@ -1,0 +1,1 @@
+# contains ouputs from the resources created in the terraform config

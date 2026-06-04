@@ -1,0 +1,1 @@
+# declares the variables used in the terraform config
