@@ -214,24 +214,7 @@ Resources:
         BlockPublicPolicy: true   # prevent public bucket policies from being applied to the bucket
         IgnorePublicAcls: true    # ignore any public ACLs
         RestrictPublicBuckets: true   # say no no to any public access to the bucket
-      
-  # ------------------------------------------DYNAMODB TABLES------------------------------------------
-  TerraformLocksTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: "craftform-tf-locks"
-      Tags:
-        - Key: "Project"
-          Value: "craftform"
-        - Key: "Environment"
-          Value: "HomeRegion"
-      AttributeDefinitions:
-        - AttributeName: "LockID"
-          AttributeType: "S"  # string type for the lock ID
-      KeySchema:
-        - AttributeName: "LockID"
-          KeyType: "HASH"  # partition key for the DynamoDB table
-      BillingMode: "PAY_PER_REQUEST"  # on-demand billing mode for the DynamoDB table
+        
   # -------------------------------------------SECRET MANGER-------------------------------------------
   # holds sensitive information like the Discord bot token and Github PAT, which are needed for the
   # craftForm bot to operate
