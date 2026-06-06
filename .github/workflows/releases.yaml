@@ -8,7 +8,7 @@
 #╚══════════════════════════════════════════════════════════════════════════════╝
 
 
-name: build and release lambda code
+name: Lambda Release Workflow
 
 
 #============================================================
@@ -48,11 +48,11 @@ jobs:
 
       # CHECKOUT AND SETUP: check out the code
       - name: Checkout Repository 
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # PYTHON SETUP: set up python 3.12 for building the lambda code
       - name: Set up Python 
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
