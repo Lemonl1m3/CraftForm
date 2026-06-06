@@ -120,7 +120,7 @@ Resources:
                 Resource: "*"
                 Condition:
                   StringEquals:
-                    "aws:ResourceTag/Project": "craftForm"  # only allow modification and deletion of resources tagged with Project=craftForm
+                    "aws:ResourceTag/Project": "craftform"  # only allow modification and deletion of resources tagged with Project=craftForm
 
               # allow full access to specefic SSM parameter path for CraftForm
               - Effect: "Allow"
@@ -137,12 +137,12 @@ Resources:
                   - s3:ListBucket
                 Resource:
                   # bucket level permissions
-                  - !GetAtt TerraformStateBucket.Arn
+                  - !GetAtt CraftFormHomeBucket.Arn
                   # object level permissions
-                  - !Sub "${TerraformStateBucket.Arn}/*"
+                  - !Sub "${CraftFormHomeBucket.Arn}/*"
 
-  # lambda minimal role - execution role
-  LambdaExecutionRole:
+  # lambda operation role
+  LambdaOperationRole:
     Type: AWS::IAM::Role
     Properties:
       # tags
@@ -152,7 +152,7 @@ Resources:
         - Key: "Environment"
           Value: "HomeRegion"
 
-      RoleName: "craftform-lambda-execution"  # Name of the IAM role for Lambda execution
+      RoleName: "craftform-lambda-operation"  # Name of the IAM role for Lambda operation
       AssumeRolePolicyDocument:  # who is allowed to assume this role - Lambda service
         Version: "2012-10-17"
         Statement:
@@ -161,37 +161,165 @@ Resources:
               Service: "lambda.amazonaws.com"  # only Lambda service to assume this role
             Action: "sts:AssumeRole"
 
-      Policies:  # inline policies for the role - permissions that the Lambda functions will have when executing
-        - PolicyName: "craftform-lambda-execution-policy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              # allow ssm read/write as well as secrete manager read
-              - Effect: "Allow"
-                Action:
-                  - ssm:GetParameter
-                  - ssm:PutParameter
-                  - ssm:GetParametersByPath
-                  - secretsmanager:GetSecretValue
-                Resource: 
-                  - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*"  # allow access to SSM parameters under the craftform path
-                  - !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform*"
+      Policies:
+  - PolicyName: "craftform-lambda-operation-policy"
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
 
-              # allow logging to CloudWatch Logs for Lambda functions - create log group, log stream, and put log events
-              - Effect: "Allow"
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: "arn:aws:logs:*:*:*"
+        # ---- config + state in SSM ----
+        # read anything under the craftform path (config, discovery, status)
+        - Sid: SsmRead
+          Effect: Allow
+          Action:
+            - ssm:GetParameter
+            - ssm:GetParameters
+            - ssm:GetParametersByPath
+          Resource: !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*"
+
+        # write ONLY the operational subpaths — never the bootstrap config
+        - Sid: SsmWrite
+          Effect: Allow
+          Action:
+            - ssm:PutParameter
+            - ssm:DeleteParameter
+          Resource:
+            - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/servers/*"
+            - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/templates/*"
+            - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/regions/*"
+
+        # ---- the GitHub PAT + Discord token, for dispatch + signature work ----
+        - Sid: SecretsRead
+          Effect: Allow
+          Action: secretsmanager:GetSecretValue
+          Resource: !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform-secrets-*"
+
+        # ---- logging, scoped to this project's own log groups ----
+        - Sid: Logs
+          Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/craftform-*:*"
+
+        # ---- EC2 reads: can't be resource-scoped, must be "*" ----
+        - Sid: Ec2Describe
+          Effect: Allow
+          Action:
+            - ec2:DescribeInstances
+            - ec2:DescribeInstanceStatus
+            - ec2:DescribeSpotInstanceRequests
+            - ec2:DescribeImages
+            - ec2:DescribeVolumes
+            - ec2:DescribeSnapshots
+            - ec2:DescribeSubnets
+            - ec2:DescribeSecurityGroups
+            - ec2:DescribeAvailabilityZones
+          Resource: "*"
+
+        # ---- launch: pinned to the m8g family (cost blast-radius control) ----
+        - Sid: Ec2Launch
+          Effect: Allow
+          Action: ec2:RunInstances
+          Resource: "*"
+          Condition:
+            StringLikeIfExists:
+              ec2:InstanceType: "m8g.*"
+
+        # ---- server lifecycle: only craftform-tagged instances ----
+        - Sid: Ec2Lifecycle
+          Effect: Allow
+          Action:
+            - ec2:StartInstances
+            - ec2:StopInstances
+            - ec2:TerminateInstances
+          Resource: "*"
+          Condition:
+            StringEquals:
+              aws:ResourceTag/Project: craftform
+
+        # ---- AMI bake: create volume/snapshot, must be tagged on create ----
+        - Sid: BakeCreate
+          Effect: Allow
+          Action:
+            - ec2:CreateVolume
+            - ec2:CreateSnapshot
+          Resource: "*"
+          Condition:
+            StringEquals:
+              aws:RequestTag/Project: craftform
+
+        # ---- AMI bake: manipulate/tear down only craftform-tagged resources ----
+        - Sid: BakeManage
+          Effect: Allow
+          Action:
+            - ec2:AttachVolume
+            - ec2:DetachVolume
+            - ec2:DeleteVolume
+            - ec2:DeleteSnapshot
+            - ec2:DeregisterImage
+          Resource: "*"
+          Condition:
+            StringEquals:
+              aws:ResourceTag/Project: craftform
+
+        # ---- register the AMI: the new image has no prior tag to scope on ----
+        - Sid: RegisterImage
+          Effect: Allow
+          Action: ec2:RegisterImage
+          Resource: "*"
+
+        # ---- allow tagging only as part of these create calls ----
+        - Sid: TagOnCreate
+          Effect: Allow
+          Action: ec2:CreateTags
+          Resource: "*"
+          Condition:
+            StringEquals:
+              ec2:CreateAction:
+                - RunInstances
+                - CreateVolume
+                - CreateSnapshot
+                - RegisterImage
+
+        # ---- pass the per-region instance-profile role (Terraform-made) to EC2 ----
+        - Sid: PassInstanceRole
+          Effect: Allow
+          Action: iam:PassRole
+          Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/craftform-*"
+          Condition:
+            StringEquals:
+              iam:PassedToService: ec2.amazonaws.com
+
+        # ---- spot's service-linked role, scoped to exactly that role ----
+        - Sid: SpotSlr
+          Effect: Allow
+          Action: iam:CreateServiceLinkedRole
+          Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot"
+          Condition:
+            StringEquals:
+              iam:AWSServiceName: spot.amazonaws.com
+
+        # ---- world data in the per-region world buckets ----
+        - Sid: WorldData
+          Effect: Allow
+          Action:
+            - s3:ListBucket
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource:
+            - "arn:aws:s3:::craftform-minecraft-worlds-*"
+            - "arn:aws:s3:::craftform-minecraft-worlds-*/*"
 
   # ------------------------------------------S3 STATE BUCKET------------------------------------------
-  TerraformStateBucket:
+  CraftFormHomeBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete  # delete the bucket when the stack is deleted
     Properties:
       # globally unique name for the S3 bucket
-      BucketName: !Sub "craftform-tf-state-${AWS::AccountId}"
+      BucketName: !Sub "craftform-home-${AWS::AccountId}"
       Tags:
         - Key: "Project"
           Value: "craftform"
@@ -279,7 +407,7 @@ Resources:
     Properties:
       Name: "/craftform/config/terraform/state-bucket"
       Type: "String"
-      Value: !Ref TerraformStateBucket
+      Value: !Ref CraftFormHomeBucket
       Description: "Name of the S3 bucket for Terraform state files"
       Tags:
         Project: "craftform"
@@ -371,7 +499,7 @@ Resources:
   # -----------------------------------------LAMBDA FUNCTIONS------------------------------------------
   StartUpFunction:
     Type: AWS::Lambda::Function
-    DependsOn: DiscordApiGateway  # ensure the API Gateway is created before the Lambda function because cloudformation can't infer this
+    DependsOn: StageCode  # ensure the API Gateway is created before the Lambda function because cloudformation can't infer this
     Properties:
       FunctionName: "craftform-startup-function"
       Description: "Lambda function to perform startup tasks for CraftForm, such as forking craftForm repo, and registering commands to discord"
@@ -391,13 +519,14 @@ Resources:
       Timeout: 120  # set a longer timeout for the startup function
       Runtime: "python3.12"  # runtime for the Lambda function
       Handler: "index.handler"  # handler for the Lambda function
-      Role: !GetAtt LambdaExecutionRole.Arn  # execution role for the Lambda function
+      Role: !GetAtt LambdaOperationRole.Arn  # operation role for the Lambda function
       Code: 
         S3Bucket: "craftform-releases"
         S3Key: "lambda-startup/startup.zip"
 
   OperationFunction:
     Type: AWS::Lambda::Function
+    DependsOn: StageCode  # ensure the code is staged before creating the Lambda
     Properties:
       FunctionName: "craftform-operation-function"
       Description: "Lambda function to handle operations for CraftForm, such as handling Discord interactions and executing Terraform commands"
@@ -409,7 +538,7 @@ Resources:
       Timeout: 30  # timeout for the operation function - basically just to trigger a workflow
       Runtime: "python3.12"  # runtime for the Lambda function
       Handler: "index.handler"  # handler for the Lambda function
-      Role: !GetAtt LambdaExecutionRole.Arn  # execution role for the Lambda function
+      Role: !GetAtt LambdaOperationRole.Arn  # operation role for the Lambda function
       Code: 
         S3Bucket: "craftform-releases"
         S3Key: "lambda-operations/operations.zip"
@@ -420,5 +549,12 @@ Resources:
   # and the API Gateway is set up
   StartupTrigger:
     Type: AWS::CloudFormation::CustomResource
+    DependsOn:
+      - DiscordApiGateway
+      - DiscordApiGatewayIntegration
+      - DiscordApiGatewayRoute
+      - DiscordApiGatewayStage
+      - DiscordApiGatewayPermission
+
     Properties:
       ServiceToken: !GetAtt StartUpFunction.Arn   # run this function after the stack is created

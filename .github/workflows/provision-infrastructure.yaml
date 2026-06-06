@@ -41,7 +41,7 @@ jobs:
       - name: Authenticate to AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}  # pass in specific IAM role created in AWS
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # pass in specific IAM role created in AWS
           aws-region: us-east-1
           
       # install terraform on the runner
