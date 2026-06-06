@@ -6,10 +6,9 @@
 #║  Signals deployment success or failure back to CloudFormation.               ║
 #╚══════════════════════════════════════════════════════════════════════════════╝
 
-AWSTemplateFormatVersion: "2010-09-09"
-Description: >
-  Develops and provisions the CraftForm home region (home base) that all infrastructure and resources are deployed/managed from. This also 
-  sets up the connections and integrations with Discord and Github, as well as the Github Actions CI/CD pipeline.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Develops and provisions the CraftForm home region (home base) that all infrastructure and resources are deployed/managed from. This also  sets up the connections and integrations with Discord and Github, as well as the Github Actions CI/CD pipeline.
 
 #====================================================================================================================
 #                                                 PARAMETERS
@@ -17,30 +16,29 @@ Description: >
 # set of necessary parameters for the home region setup - comes from the user input during stack creation
 #--------------------------------------------------------------------------------------------------------------------
 Parameters:
-  
+
   # discord parameters for the CraftForm bot
   DiscordAppId:
     Type: String
     Description: The Discord Application ID for the CraftForm bot.
-    NoEcho: true  # Hide the value in the CloudFormation console for security
+    NoEcho: true # Hide the value in the CloudFormation console for security
   DiscordPublicKey:
     Type: String
     Description: The Discord Public Key for verifying interactions from Discord.
-    NoEcho: true  # Hide the value in the CloudFormation console for security
+    NoEcho: true # Hide the value in the CloudFormation console for security
   DiscordBotToken:
     Type: String
     Description: The Discord Bot Token for authenticating the CraftForm bot with Discord.
-    NoEcho: true  # Hide the value in the CloudFormation console for security
+    NoEcho: true # Hide the value in the CloudFormation console for security
 
   # Github parameters for the GitHub integration and cloning from the GitHub repository
   GitHubPersonalAccessToken:
     Type: String
     Description: The GitHub Personal Access Token for authenticating with GitHub APIs.
-    NoEcho: true  # Hide the value in the CloudFormation console for security
+    NoEcho: true # Hide the value in the CloudFormation console for security
   GitHubUsername:
     Type: String
     Description: The GitHub Username associated with the Personal Access Token.
-
 
 #====================================================================================================================
 #                                                 RESOURCES
@@ -53,93 +51,84 @@ Parameters:
 Resources:
   # OIDC PROVIDER - allows GitHub Actions to authenticate with AWS using OIDC tokens rather than secret access keys, which is more secure and eliminates the need to manage long-lived credentials for GitHub Actions in AWS. This OIDC provider will be used in the trust policy of the IAM role that GitHub Actions will assume when deploying to the home region.
   GithubOIDCProvider:
-    Type: AWS::IAM::OIDCProvider 
+    Type: AWS::IAM::OIDCProvider
     Properties:
-      Url: "https://token.actions.githubusercontent.com"  # OIDC provider URL for GitHub Actions
-      ClientIdList: # basically where GitHub Actions will be allowed to authenticate from
-        - "sts.amazonaws.com" 
+      Url: https://token.actions.githubusercontent.com # OIDC provider URL for GitHub Actions
+      ClientIdList:
+        # basically where GitHub Actions will be allowed to authenticate from
+        - sts.amazonaws.com
       ThumbprintList:
-      # Thumbprint for token.actions.githubusercontent.com
-        - "6938fd4d98bab03faadb97b34396831e3780aea1" 
-        - "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
+        # Thumbprint for token.actions.githubusercontent.com
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+        - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
 
   # ------------------------------------------IAM ROLES------------------------------------------
   # github actions role
   GithubActionsRole:
     Type: AWS::IAM::Role
-    Properties: # configs for the IAM role that GitHub Actions will assume
+    Properties:
+      # configs for the IAM role that GitHub Actions will assume
       # tags
       Tags:
-        - Key: "Project"
-          Value: "craftform"
-        - Key: "Environment"
-          Value: "HomeRegion"
-      RoleName: "craftform-github-actions"  # Name of the IAM role for GitHub Actions
-      AssumeRolePolicyDocument:  # who is allowed to assume this role - GithubActions
-        Version: "2012-10-17"
-        Statement:  # list of statements in the trust policy
-          - Effect: "Allow"
-            Principal: # who is allowed to assume this role
+        - Key: Project
+          Value: craftform
+        - Key: Environment
+          Value: HomeRegion
+      RoleName: craftform-github-actions # Name of the IAM role for GitHub Actions
+      AssumeRolePolicyDocument:
+        # who is allowed to assume this role - GithubActions
+        Version: '2012-10-17'
+        Statement:
+          # list of statements in the trust policy
+          - Effect: Allow
+            Principal:
+              # who is allowed to assume this role
               # reference the created OIDC provider for Github Actions - Get the ARN (can't use !Ref here)
               Federated: !GetAtt GithubOIDCProvider.Arn
 
             # allow assuming the role with web identity (OIDC token)
-            Action: "sts:AssumeRoleWithWebIdentity"
+            Action: sts:AssumeRoleWithWebIdentity
 
-            Condition:  # conditions for assuming the role
+            Condition:
+              # conditions for assuming the role
               StringEquals:
                 # only accept token with this audience claim - that the token is meant for AWS STS
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                 # only accept tokens from this specific repo/user - where the token is coming from
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubUsername}/CraftForm:*"
-      
-      Policies:  # inline policies for the role - permissions that the role has
-        - PolicyName: "craftform-github-actions-policy"
+                # only accept tokens from this specific repo/user - where the token is coming from
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubUsername}/CraftForm:*
+
+      Policies:
+        # inline policies for the role - permissions that the role has
+        - PolicyName: craftform-github-actions-policy
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               # allow creatiion
-              - Effect: "Allow"
+              - Effect: Allow
                 Action:
-                  - ec2:Create*
-                  - ec2:RunInstances
-                  - ec2:AllocateAddress
                   - s3:CreateBucket
                   - iam:CreateRole
                   - iam:CreatePolicy
                   - iam:CreateInstanceProfile
                   - iam:AttachRolePolicy
                   - iam:PassRole
-                Resource: "*"
+                Resource: '*'
 
               # allow modification and desctruction of anything with specific craftForm tag
-              - Effect: "Allow"
+              - Effect: Allow
                 Action:
-                  - "*"  # all actions
-                Resource: "*"
+                  - '*' # all actions
+                Resource: '*'
                 Condition:
                   StringEquals:
-                    "aws:ResourceTag/Project": "craftform"  # only allow modification and deletion of resources tagged with Project=craftForm
+                    aws:ResourceTag/Project: craftform # only allow modification and deletion of resources tagged with Project=craftForm
 
-              # allow full access to specefic SSM parameter path for CraftForm
-              - Effect: "Allow"
+              # allow full access to specific SSM parameter path for CraftForm
+              - Effect: Allow
                 Action:
                   - ssm:*
-                Resource: !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*"
-
-              # allow full access to specefic S3 for CraftForm
-              - Effect: "Allow"
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                  - s3:ListBucket
-                Resource:
-                  # bucket level permissions
-                  - !GetAtt CraftFormHomeBucket.Arn
-                  # object level permissions
-                  - !Sub "${CraftFormHomeBucket.Arn}/*"
+                Resource: !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*
 
   # lambda operation role
   LambdaOperationRole:
@@ -147,195 +136,196 @@ Resources:
     Properties:
       # tags
       Tags:
-        - Key: "Project"
-          Value: "craftform"
-        - Key: "Environment"
-          Value: "HomeRegion"
+        - Key: Project
+          Value: craftform
+        - Key: Environment
+          Value: HomeRegion
 
-      RoleName: "craftform-lambda-operation"  # Name of the IAM role for Lambda operation
-      AssumeRolePolicyDocument:  # who is allowed to assume this role - Lambda service
-        Version: "2012-10-17"
+      RoleName: craftform-lambda-operation # Name of the IAM role for Lambda operation
+      AssumeRolePolicyDocument:
+        # who is allowed to assume this role - Lambda service
+        Version: '2012-10-17'
         Statement:
-          - Effect: "Allow"
+          - Effect: Allow
             Principal:
-              Service: "lambda.amazonaws.com"  # only Lambda service to assume this role
-            Action: "sts:AssumeRole"
+              Service: lambda.amazonaws.com # only Lambda service to assume this role
+            Action: sts:AssumeRole
 
       Policies:
-  - PolicyName: "craftform-lambda-operation-policy"
-    PolicyDocument:
-      Version: "2012-10-17"
-      Statement:
+        - PolicyName: craftform-lambda-operation-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
 
-        # ---- config + state in SSM ----
-        # read anything under the craftform path (config, discovery, status)
-        - Sid: SsmRead
-          Effect: Allow
-          Action:
-            - ssm:GetParameter
-            - ssm:GetParameters
-            - ssm:GetParametersByPath
-          Resource: !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*"
+              # ---- config + state in SSM ----
+              # read anything under the craftform path (config, discovery, status)
+              - Sid: SsmRead
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource: !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*
 
-        # write ONLY the operational subpaths — never the bootstrap config
-        - Sid: SsmWrite
-          Effect: Allow
-          Action:
-            - ssm:PutParameter
-            - ssm:DeleteParameter
-          Resource:
-            - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/servers/*"
-            - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/templates/*"
-            - !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/regions/*"
+              # write ONLY the operational subpaths — never the bootstrap config
+              - Sid: SsmWrite
+                Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                  - ssm:DeleteParameter
+                Resource:
+                  - !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/servers/*
+                  - !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/templates/*
+                  - !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/regions/*
 
-        # ---- the GitHub PAT + Discord token, for dispatch + signature work ----
-        - Sid: SecretsRead
-          Effect: Allow
-          Action: secretsmanager:GetSecretValue
-          Resource: !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform-secrets-*"
+              # ---- the GitHub PAT + Discord token, for dispatch + signature work ----
+              - Sid: SecretsRead
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform-secrets-*
 
-        # ---- logging, scoped to this project's own log groups ----
-        - Sid: Logs
-          Effect: Allow
-          Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-          Resource: !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/craftform-*:*"
+              # ---- logging, scoped to this project's own log groups ----
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/craftform-*:*
 
-        # ---- EC2 reads: can't be resource-scoped, must be "*" ----
-        - Sid: Ec2Describe
-          Effect: Allow
-          Action:
-            - ec2:DescribeInstances
-            - ec2:DescribeInstanceStatus
-            - ec2:DescribeSpotInstanceRequests
-            - ec2:DescribeImages
-            - ec2:DescribeVolumes
-            - ec2:DescribeSnapshots
-            - ec2:DescribeSubnets
-            - ec2:DescribeSecurityGroups
-            - ec2:DescribeAvailabilityZones
-          Resource: "*"
+              # ---- EC2 reads: can't be resource-scoped, must be "*" ----
+              - Sid: Ec2Describe
+                Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:DescribeInstanceStatus
+                  - ec2:DescribeSpotInstanceRequests
+                  - ec2:DescribeImages
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeAvailabilityZones
+                Resource: '*'
 
-        # ---- launch: pinned to the m8g family (cost blast-radius control) ----
-        - Sid: Ec2Launch
-          Effect: Allow
-          Action: ec2:RunInstances
-          Resource: "*"
-          Condition:
-            StringLikeIfExists:
-              ec2:InstanceType: "m8g.*"
+              # ---- launch: pinned to the m8g family (cost blast-radius control) ----
+              - Sid: Ec2Launch
+                Effect: Allow
+                Action: ec2:RunInstances
+                Resource: '*'
+                Condition:
+                  StringLikeIfExists:
+                    ec2:InstanceType: m8g.*
 
-        # ---- server lifecycle: only craftform-tagged instances ----
-        - Sid: Ec2Lifecycle
-          Effect: Allow
-          Action:
-            - ec2:StartInstances
-            - ec2:StopInstances
-            - ec2:TerminateInstances
-          Resource: "*"
-          Condition:
-            StringEquals:
-              aws:ResourceTag/Project: craftform
+              # ---- server lifecycle: only craftform-tagged instances ----
+              - Sid: Ec2Lifecycle
+                Effect: Allow
+                Action:
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                  - ec2:TerminateInstances
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/Project: craftform
 
-        # ---- AMI bake: create volume/snapshot, must be tagged on create ----
-        - Sid: BakeCreate
-          Effect: Allow
-          Action:
-            - ec2:CreateVolume
-            - ec2:CreateSnapshot
-          Resource: "*"
-          Condition:
-            StringEquals:
-              aws:RequestTag/Project: craftform
+              # ---- AMI bake: create volume/snapshot, must be tagged on create ----
+              - Sid: BakeCreate
+                Effect: Allow
+                Action:
+                  - ec2:CreateVolume
+                  - ec2:CreateSnapshot
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/Project: craftform
 
-        # ---- AMI bake: manipulate/tear down only craftform-tagged resources ----
-        - Sid: BakeManage
-          Effect: Allow
-          Action:
-            - ec2:AttachVolume
-            - ec2:DetachVolume
-            - ec2:DeleteVolume
-            - ec2:DeleteSnapshot
-            - ec2:DeregisterImage
-          Resource: "*"
-          Condition:
-            StringEquals:
-              aws:ResourceTag/Project: craftform
+              # ---- AMI bake: manipulate/tear down only craftform-tagged resources ----
+              - Sid: BakeManage
+                Effect: Allow
+                Action:
+                  - ec2:AttachVolume
+                  - ec2:DetachVolume
+                  - ec2:DeleteVolume
+                  - ec2:DeleteSnapshot
+                  - ec2:DeregisterImage
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/Project: craftform
 
-        # ---- register the AMI: the new image has no prior tag to scope on ----
-        - Sid: RegisterImage
-          Effect: Allow
-          Action: ec2:RegisterImage
-          Resource: "*"
+              # ---- register the AMI: the new image has no prior tag to scope on ----
+              - Sid: RegisterImage
+                Effect: Allow
+                Action: ec2:RegisterImage
+                Resource: '*'
 
-        # ---- allow tagging only as part of these create calls ----
-        - Sid: TagOnCreate
-          Effect: Allow
-          Action: ec2:CreateTags
-          Resource: "*"
-          Condition:
-            StringEquals:
-              ec2:CreateAction:
-                - RunInstances
-                - CreateVolume
-                - CreateSnapshot
-                - RegisterImage
+              # ---- allow tagging only as part of these create calls ----
+              - Sid: TagOnCreate
+                Effect: Allow
+                Action: ec2:CreateTags
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    ec2:CreateAction:
+                      - RunInstances
+                      - CreateVolume
+                      - CreateSnapshot
+                      - RegisterImage
 
-        # ---- pass the per-region instance-profile role (Terraform-made) to EC2 ----
-        - Sid: PassInstanceRole
-          Effect: Allow
-          Action: iam:PassRole
-          Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/craftform-*"
-          Condition:
-            StringEquals:
-              iam:PassedToService: ec2.amazonaws.com
+              # ---- pass the per-region instance-profile role (Terraform-made) to EC2 ----
+              - Sid: PassInstanceRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/craftform-*
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: ec2.amazonaws.com
 
-        # ---- spot's service-linked role, scoped to exactly that role ----
-        - Sid: SpotSlr
-          Effect: Allow
-          Action: iam:CreateServiceLinkedRole
-          Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot"
-          Condition:
-            StringEquals:
-              iam:AWSServiceName: spot.amazonaws.com
+              # ---- spot's service-linked role, scoped to exactly that role ----
+              - Sid: SpotSlr
+                Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName: spot.amazonaws.com
 
-        # ---- world data in the per-region world buckets ----
-        - Sid: WorldData
-          Effect: Allow
-          Action:
-            - s3:ListBucket
-            - s3:GetObject
-            - s3:PutObject
-            - s3:DeleteObject
-          Resource:
-            - "arn:aws:s3:::craftform-minecraft-worlds-*"
-            - "arn:aws:s3:::craftform-minecraft-worlds-*/*"
+              # ---- world data in the per-region world buckets ----
+              - Sid: WorldData
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - arn:aws:s3:::craftform-minecraft-worlds-*
+                  - arn:aws:s3:::craftform-minecraft-worlds-*/*
 
   # ------------------------------------------S3 STATE BUCKET------------------------------------------
   CraftFormHomeBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Delete  # delete the bucket when the stack is deleted
+    DeletionPolicy: Delete # delete the bucket when the stack is deleted
     Properties:
       # globally unique name for the S3 bucket
-      BucketName: !Sub "craftform-home-${AWS::AccountId}"
+      BucketName: !Sub craftform-home-${AWS::AccountId}
       Tags:
-        - Key: "Project"
-          Value: "craftform"
-        - Key: "Environment"
-          Value: "HomeRegion"
+        - Key: Project
+          Value: craftform
+        - Key: Environment
+          Value: HomeRegion
 
       # enable versioning to keep track of changes to the Terraform state files
       VersioningConfiguration:
-        Status: "Enabled"
+        Status: Enabled
 
       # block public access to the bucket for security
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true     # prevent public ACLs from being set on the bucket or objects within the bucket
-        BlockPublicPolicy: true   # prevent public bucket policies from being applied to the bucket
-        IgnorePublicAcls: true    # ignore any public ACLs
-        RestrictPublicBuckets: true   # say no no to any public access to the bucket
+        BlockPublicAcls: true # prevent public ACLs from being set on the bucket or objects within the bucket
+        BlockPublicPolicy: true # prevent public bucket policies from being applied to the bucket
+        IgnorePublicAcls: true # ignore any public ACLs
+        RestrictPublicBuckets: true # say no no to any public access to the bucket
 
   # -------------------------------------------SECRET MANGER-------------------------------------------
   # holds sensitive information like the Discord bot token and Github PAT, which are needed for the
@@ -344,139 +334,144 @@ Resources:
   CraftFormSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: "craftform-secrets"
-      Description: "Secrets for CraftForm application, including Discord and GitHub credentials."
+      Name: craftform-secrets
+      Description: Secrets for CraftForm application, including Discord and GitHub
+        credentials.
       Tags:
-        - Key: "Project"
-          Value: "craftform"
-        - Key: "Environment"
-          Value: "HomeRegion"
+        - Key: Project
+          Value: craftform
+        - Key: Environment
+          Value: HomeRegion
 
-      SecretString: !Sub '{"Discord-Bot-Token": "${DiscordBotToken}", "Github-PAT": "${GitHubPersonalAccessToken}"}'
+      SecretString: !Sub '{"Discord-Bot-Token": "${DiscordBotToken}", "Github-PAT":
+        "${GitHubPersonalAccessToken}"}'
 
   # -------------------------------------------SSM PARAMETERS------------------------------------------
   # HOME REGION PARAMETER
   HomeRegionParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/home-region"
-      Type: "String"
-      Value: !Sub "${AWS::Region}"  # set the value of the home region parameter
-      Description: "Home AWS region for CraftForm"
+      Name: /craftform/config/home-region
+      Type: String
+      Value: !Sub ${AWS::Region} # set the value of the home region parameter
+      Description: Home AWS region for CraftForm
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
-      
+        Project: craftform
+        Environment: HomeRegion
+
   # GITHUB PARAMETERS:
   GithubUsernameParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/github/username"
-      Type: "String"
+      Name: /craftform/config/github/username
+      Type: String
       Value: !Ref GitHubUsername
-      Description: "GitHub username for CraftForm integration"
+      Description: GitHub username for CraftForm integration
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
+        Project: craftform
+        Environment: HomeRegion
 
-# DISCORD PARAMETERS:
+  # DISCORD PARAMETERS:
   DiscordAppIdParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/discord/app-id"
-      Type: "String"
+      Name: /craftform/config/discord/app-id
+      Type: String
       Value: !Ref DiscordAppId
-      Description: "Discord Application ID for CraftForm bot"
+      Description: Discord Application ID for CraftForm bot
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
+        Project: craftform
+        Environment: HomeRegion
+
   DiscordPublicKeyParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/discord/public-key"
-      Type: "String"
+      Name: /craftform/config/discord/public-key
+      Type: String
       Value: !Ref DiscordPublicKey
-      Description: "Discord Public Key for CraftForm bot"
+      Description: Discord Public Key for CraftForm bot
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
+        Project: craftform
+        Environment: HomeRegion
 
   # STATE FILE PARAMETERS:
   S3StateBucketParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/terraform/state-bucket"
-      Type: "String"
+      Name: /craftform/config/terraform/state-bucket
+      Type: String
       Value: !Ref CraftFormHomeBucket
-      Description: "Name of the S3 bucket for Terraform state files"
+      Description: Name of the S3 bucket for Terraform state files
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
+        Project: craftform
+        Environment: HomeRegion
 
   # API GATEWAY PARAMETER:
   APIGatewayEndpointParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/api-gateway/endpoint/discord"
-      Type: "String"
-      Value: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord"  # construct the API Gateway endpoint URL using the API ID and region
-      Description: "API Gateway endpoint URL for CraftForm bot interactions"
+      Name: /craftform/config/api-gateway/endpoint/discord
+      Type: String
+      Value: !Sub https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord # construct the API Gateway endpoint URL using the API ID and region
+      Description: API Gateway endpoint URL for CraftForm bot interactions
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
+        Project: craftform
+        Environment: HomeRegion
 
   # IAM ROLE PARAMETERS:  
   GithubActionsRoleArnParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/iam/github-actions-role-arn"
-      Type: "String"
-      Value: !GetAtt GithubActionsRole.Arn  # get the ARN of the GitHub Actions role
-      Description: "ARN of the IAM role for GitHub Actions to assume when deploying to the home region"
+      Name: /craftform/config/iam/github-actions-role-arn
+      Type: String
+      Value: !GetAtt GithubActionsRole.Arn # get the ARN of the GitHub Actions role
+      Description: ARN of the IAM role for GitHub Actions to assume when deploying to
+        the home region
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
-  
+        Project: craftform
+        Environment: HomeRegion
+
   # SECRETS MANAGER PARAMETERS:
   CraftFormSecretsArnParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: "/craftform/config/secrets/arn"
-      Type: "String"
-      Value: !Ref CraftFormSecrets  # get the ARN of the Secrets Manager secret
-      Description: "ARN of the Secrets Manager secret that holds CraftForm secrets"
+      Name: /craftform/config/secrets/arn
+      Type: String
+      Value: !Ref CraftFormSecrets # get the ARN of the Secrets Manager secret
+      Description: ARN of the Secrets Manager secret that holds CraftForm secrets
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
+        Project: craftform
+        Environment: HomeRegion
 
   # --------------------------------------------API GATEWAY--------------------------------------------
   DiscordApiGateway:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: "CraftFormDiscordAPI"
-      Description: "API Gateway for handling Discord interactions with the CraftForm Discord bot."
+      Name: CraftFormDiscordAPI
+      Description: API Gateway for handling Discord interactions with the CraftForm
+        Discord bot.
       Tags:
-        Project: "craftform"
-        Environment: "HomeRegion"
-      ProtocolType: "HTTP"  # Use HTTP API for lower latency and simpler setup
+        Project: craftform
+        Environment: HomeRegion
+      ProtocolType: HTTP # Use HTTP API for lower latency and simpler setup
 
   # INTEGRATION - what connects the Gateway to the resource (Lambda function)
   DiscordApiGatewayIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref DiscordApiGateway
-      IntegrationType: "AWS_PROXY"  # Use AWS_PROXY to integrate directly with the Lambda function
+      IntegrationType: AWS_PROXY # Use AWS_PROXY to integrate directly with the Lambda function
       # route all requests from the API Gateway to the OperationFunction Lambda
       IntegrationUri: !GetAtt OperationFunction.Arn
-      PayloadFormatVersion: "2.0"  # use latest HTTP payload format
+      PayloadFormatVersion: '2.0' # use latest HTTP payload format
 
   # ROUTE - basically a router for certain inputs that the Gateway receives and calls an integration
   DiscordApiGatewayRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref DiscordApiGateway
-      RouteKey: "POST /discord"  # route for handling Discord interactions - only POST requests
-      Target: !Sub "integrations/${DiscordApiGatewayIntegration}"  # target the integration
+      RouteKey: POST /discord # route for handling Discord interactions - only POST requests
+      Target: !Sub integrations/${DiscordApiGatewayIntegration} # target the integration
 
   # STAGE - gives a stable and clean URL for the Gateway that Discord can hit
   DiscordApiGatewayStage:
@@ -484,66 +479,73 @@ Resources:
     Properties:
       ApiId: !Ref DiscordApiGateway
       StageName: $default # gives a default stage for the API Gateway - stable and clean URL
-      AutoDeploy: true  # automatically deploy changes to the API Gateway
+      AutoDeploy: true # automatically deploy changes to the API Gateway
 
   # PERMISSION - allow the Gateway to invoke the Lambda function
   DiscordApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref OperationFunction  # what function the gatewa is allowed to invoke
-      Action: "lambda:InvokeFunction" # what action the gateway is allowed to do to the function - invoke it
-      Principal: "apigateway.amazonaws.com" # who is allowed to do the action - API Gateway service
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DiscordApiGateway}/*/*"   # only allow this specific API Gateway to invoke
-
+      FunctionName: !Ref OperationFunction # what function the gatewa is allowed to invoke
+      Action: lambda:InvokeFunction # what action the gateway is allowed to do to the function - invoke it
+      Principal: apigateway.amazonaws.com # who is allowed to do the action - API Gateway service
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DiscordApiGateway}/*/* # only allow this specific API Gateway to invoke
 
   # -----------------------------------------LAMBDA FUNCTIONS------------------------------------------
+
+  # Lambda function for startup tasks -  gets triggered when the stack is created
   StartUpFunction:
     Type: AWS::Lambda::Function
-    DependsOn: StageCode  # ensure the API Gateway is created before the Lambda function because cloudformation can't infer this
+    DependsOn: StageCode # ensure the API Gateway is created before the Lambda function because cloudformation can't infer this
     Properties:
-      FunctionName: "craftform-startup-function"
-      Description: "Lambda function to perform startup tasks for CraftForm, such as forking craftForm repo, and registering commands to discord"
+      FunctionName: craftform-startup-function
+      Description: Lambda function to perform startup tasks for CraftForm, such as
+        forking craftForm repo, and registering commands to discord
       Tags:
-        - Key: "Project"
-          Value: "craftform"
-        - Key: "Environment"
-          Value: "HomeRegion"
+        - Key: Project
+          Value: craftform
+        - Key: Environment
+          Value: HomeRegion
 
       # Variables
       Environment:
+
         Variables:
           GithubUsername: !Ref GitHubUsername
-          ApiGatewayUrl: !Sub "https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord"
+          ApiGatewayUrl: !Sub https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord
           GithubActionsRoleArn: !GetAtt GithubActionsRole.Arn
           DiscordAppId: !Ref DiscordAppId
-      Timeout: 120  # set a longer timeout for the startup function
-      Runtime: "python3.12"  # runtime for the Lambda function
-      Handler: "index.handler"  # handler for the Lambda function
-      Role: !GetAtt LambdaOperationRole.Arn  # operation role for the Lambda function
-      Code: 
-        S3Bucket: "craftform-releases"
-        S3Key: "lambda-startup/startup.zip"
 
+      Timeout: 120 # set a longer timeout for the startup function
+      Runtime: python3.12 # runtime for the Lambda function
+      Handler: index.handler # handler for the Lambda function
+      Role: !GetAtt LambdaOperationRole.Arn # operation role for the Lambda function
+      Code:
+        S3Bucket: craftform-releases
+        S3Key: lambda-startup/startup.zip
+
+  # Lambda function for handling all operations for CraftForm - basically the main function
   OperationFunction:
     Type: AWS::Lambda::Function
-    DependsOn: StageCode  # ensure the code is staged before creating the Lambda
-    Properties:
-      FunctionName: "craftform-operation-function"
-      Description: "Lambda function to handle operations for CraftForm, such as handling Discord interactions and executing Terraform commands"
-      Tags:
-        - Key: "Project"
-          Value: "craftform"
-        - Key: "Environment"
-          Value: "HomeRegion"
-      Timeout: 30  # timeout for the operation function - basically just to trigger a workflow
-      Runtime: "python3.12"  # runtime for the Lambda function
-      Handler: "index.handler"  # handler for the Lambda function
-      Role: !GetAtt LambdaOperationRole.Arn  # operation role for the Lambda function
-      Code: 
-        S3Bucket: "craftform-releases"
-        S3Key: "lambda-operations/operations.zip"
+    DependsOn: StageCode # ensure the code is staged before creating the Lambda
 
-              
+    Properties:
+      FunctionName: craftform-operation-function
+      Description: Lambda function to handle operations for CraftForm, such as
+        handling Discord interactions and executing Terraform commands
+
+      Tags:
+        - Key: Project
+          Value: craftform
+        - Key: Environment
+          Value: HomeRegion
+      Timeout: 30 # timeout for the operation function - basically just to trigger a workflow
+      Runtime: python3.12 # runtime for the Lambda function
+      Handler: index.handler # handler for the Lambda function
+      Role: !GetAtt LambdaOperationRole.Arn # operation role for the Lambda function
+      Code:
+        S3Bucket: craftform-releases
+        S3Key: lambda-operations/operations.zip
+
   # ------------------------------------------RESOURCE TRIGGER-----------------------------------------
   # trigger the startup Lambda function to perform necessary startup tasks after the stack is created 
   # and the API Gateway is set up
@@ -557,4 +559,4 @@ Resources:
       - DiscordApiGatewayPermission
 
     Properties:
-      ServiceToken: !GetAtt StartUpFunction.Arn   # run this function after the stack is created
+      ServiceToken: !GetAtt StartUpFunction.Arn # run this function after the stack is created

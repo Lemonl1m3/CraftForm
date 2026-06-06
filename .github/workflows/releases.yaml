@@ -1,0 +1,97 @@
+
+#╔══════════════════════════════════════════════════════════════════════════════╗
+#║                                  CraftForm                                   ║
+#╠══════════════════════════════════════════════════════════════════════════════╣
+#║  GITHUB ACTIONS  ::  release.yaml                                            ║
+#║  Builds the operations + startup lambda zips and publishes them              ║
+#║  as GitHub release assets for the bootstrap stager to pull.                  ║
+#╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+name: build and release lambda code
+
+
+#============================================================
+#                 TRIGGER SETTINGS
+#============================================================
+on:
+
+  # MANUAL TRIGGER: allow manual triggers and require a version number input for the release
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number for the release (e.g., v1.2.3)'
+        required: true
+
+  # AUTOMATIC TRIGGER: trigger on new version tags being pushed in the repo      
+  push:
+    tags: ['v*.*.*'] # trigger on version tags like v1.2.3
+
+# GIT PERMISSIONS: allow the git token to write to repo
+permissions:
+  contents: write    # needed to create releases and upload assets
+
+
+
+#============================================================
+#                 JOB EXECUTION
+#============================================================
+
+jobs:
+
+  # RELEASE JOB: job for building the the lambda code, creating new releases, and uploading the built lambda code
+  release:
+    if: github.repository == 'Liamade/CraftForm' # only run this workflow in the main repo, not in forks
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # CHECKOUT AND SETUP: check out the code
+      - name: Checkout Repository 
+        uses: actions/checkout@v4
+
+      # PYTHON SETUP: set up python 3.12 for building the lambda code
+      - name: Set up Python 
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+
+      # BUILD LAMBDA CODE: install dependencies and build the lambda code into a zip file for distribution
+      - name: Build Lambda Code
+        run: |
+          # --build the lambda code for both the startup and operations function
+          for function in startup operations; do
+          
+            # --install dependencies from the requirements file into a build directory for the function
+            pip install -r requirements.txt -t lambda-build/$function \
+              --platform manylinux2014_x84_64 \
+              --python-version 3.12 \
+              --only-binary=:all: \
+
+            # --copy the lambda function code into the build directory
+            cp lambda/$function/*.py lambda-build/$function/
+
+            # --zip up the contents of the build directory for the function
+            (
+              cd lambda-build/$function
+              zip -r ../../$function.zip .
+            )
+
+          done
+
+      # CREATE GITHUB RELEASE: create a new release in GitHub using the version number from the workflow input
+      - name: Publish Release
+        id: release  # capture the output of this step to get the release ID
+        uses: softprops/action-gh-release@v2
+        with:
+          name: CraftForm ${{ inputs.version || github.ref_name }} # set the release name
+          tag_name: ${{ inputs.version || github.ref_name }} # set the tag name to the version tag
+          target_commitish: ${{ github.sha }} # set the target commit for the release to the current commit that triggered the workflow
+          generate_release_notes: true # let the action generate release notes based on merged PRs and commits
+          fail_on_unmatched_files: true # fail if the files to upload are not found
+          
+          files: |
+            startup.zip
+            operations.zip
+  
