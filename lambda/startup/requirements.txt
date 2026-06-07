@@ -2,4 +2,4 @@
 #                          DEPENDENCIES
 #=====================================================================
 
-PyNaCl # for encryption and decryption of secrets
+PyNaCl==1.6.2 # for encryption and decryption of secrets
