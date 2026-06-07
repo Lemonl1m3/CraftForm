@@ -17,6 +17,11 @@ Description: |
 #--------------------------------------------------------------------------------------------------------------------
 Parameters:
 
+  # release version of the code use for the Lambda functions
+  CraftFormVersion:
+    Type: String
+    Default: latest
+    Description: The version of the CraftForm code to deploy (e.g., "v1.0.0" or "latest"). This is used to stage the correct Lambda code from the GitHub releases.
   # discord parameters for the CraftForm bot
   DiscordAppId:
     Type: String
@@ -63,7 +68,7 @@ Resources:
         - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
 
   # ------------------------------------------IAM ROLES------------------------------------------
-  # github actions role
+  # GITHUB ACTIONS ROLE -- the IAM role that GitHub Actions will assume
   GithubActionsRole:
     Type: AWS::IAM::Role
     Properties:
@@ -104,7 +109,7 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # allow creatiion
+              # allow creation
               - Effect: Allow
                 Action:
                   - s3:CreateBucket
@@ -130,7 +135,7 @@ Resources:
                   - ssm:*
                 Resource: !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*
 
-  # lambda operation role
+  # LAMBDA OPERATION ROLE - the IAM role that the Lambda function will assume
   LambdaOperationRole:
     Type: AWS::IAM::Role
     Properties:
@@ -303,6 +308,37 @@ Resources:
                   - arn:aws:s3:::craftform-minecraft-worlds-*
                   - arn:aws:s3:::craftform-minecraft-worlds-*/*
 
+  # STAGER ROLE -- used for staging the Lambda code in S3 before deployment
+  StagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: craftform-stager
+      # tags
+      Tags:
+        - { Key: Project, Value: craftform }
+        - { Key: Environment, Value: HomeRegion }
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        # only let lambda service assume this role
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: craftform-stager-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+                # allow putting objects into the specific S3 bucket
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub "${CraftFormHomeBucket.Arn}/lambda-code/*" # only allow access to the specific S3 bucket and prefix used for staging Lambda code
+              # allow creating log groups and streams.
+              - Effect: Allow
+                Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/craftform-*:*"
   # ------------------------------------------S3 STATE BUCKET------------------------------------------
   CraftFormHomeBucket:
     Type: AWS::S3::Bucket
@@ -485,17 +521,78 @@ Resources:
   DiscordApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref OperationFunction # what function the gatewa is allowed to invoke
+      FunctionName: !Ref OperationFunction # what function the gatewau is allowed to invoke
       Action: lambda:InvokeFunction # what action the gateway is allowed to do to the function - invoke it
       Principal: apigateway.amazonaws.com # who is allowed to do the action - API Gateway service
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DiscordApiGateway}/*/* # only allow this specific API Gateway to invoke
 
   # -----------------------------------------LAMBDA FUNCTIONS------------------------------------------
+  # STAGING LAMBDA FUNCTION - used to stage the code for the other lambda function in S3 before deployment.
+  StagingFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: craftform-staging-function
+      Description: Lambda function to stage code for the other Lambda functions in S3 before deployment.
+      Tags:
+        - { Key: Project, Value: craftform }
+        - { Key: Environment, Value: HomeRegion }
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 60
+      MemorySize: 256 # give it a bit more memory for faster staging
+      Role: !GetAtt StagerRole.Arn
+      Code:
+        ZipFile: | 
+          import urllib.request, boto3
+          impot cfnresponse
+          
+          # start a aws s3 client to stage the code in S3
+          s3 = boto3.client('s3')
+
+          def handler(event, context):
+            try:
+              if event['RequestType'] != 'Delete':
+
+                # Stage the Lambda code in S3
+                envVar = event['ResourceProperties']
+
+                # set the url
+                base = "https://github.com/Liamade/CraftForm/releases"
+                version = envVar['Version']
+
+                # construct the 'full' URLs for the assets based on the version and base URL
+                if version == 'latest':
+                  url = f"{base}/latest/download"
+                else:
+                  url = f"{base}/download/{version}"
+
+                for asset in envVar['Assets']:
+
+                  # construct the full url for the asset
+                  fullUrl = f"{url}/{asset}"
+
+                  # download the file based on asset
+                  download = urllib.request.urlopen(fullUrl).read()
+
+                  # put in corresponding S3
+                  s3.put_object(
+                    Bucket = envVar['Bucket'],
+                    Key = f"lambda-code/{asset}",
+                    Body = download
+                  ) 
+              # send a success response back to CloudFormation
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+            except Exception as e:
+              print(f"Error staging Lambda code: {e}")
+              # send a failure response back to CloudFormation
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}) 
+          
 
   # Lambda function for startup tasks -  gets triggered when the stack is created
   StartUpFunction:
     Type: AWS::Lambda::Function
-    DependsOn: StageCode # ensure the API Gateway is created before the Lambda function because cloudformation can't infer this
+    DependsOn: StageCode # ensure the code is staged before creating the Lambda
     Properties:
       FunctionName: craftform-startup-function
       Description: Lambda function to perform startup tasks for CraftForm, such as
@@ -520,8 +617,8 @@ Resources:
       Handler: index.handler # handler for the Lambda function
       Role: !GetAtt LambdaOperationRole.Arn # operation role for the Lambda function
       Code:
-        S3Bucket: craftform-releases
-        S3Key: lambda-startup/startup.zip
+        S3Bucket: !Ref CraftFormHomeBucket # use the staged code in S3
+        S3Key: lambda-code/startup.zip
 
   # Lambda function for handling all operations for CraftForm - basically the main function
   OperationFunction:
@@ -543,20 +640,32 @@ Resources:
       Handler: index.handler # handler for the Lambda function
       Role: !GetAtt LambdaOperationRole.Arn # operation role for the Lambda function
       Code:
-        S3Bucket: craftform-releases
-        S3Key: lambda-operations/operations.zip
+        S3Bucket: !Ref CraftFormHomeBucket # use the staged code in S3
+        S3Key: lambda-code/operations.zip
 
   # ------------------------------------------RESOURCE TRIGGER-----------------------------------------
-  # trigger the startup Lambda function to perform necessary startup tasks after the stack is created 
-  # and the API Gateway is set up
+
+  # CUSTOM STAGE CODE RESOURCE - trigger the staging Lambda function to stage the code in S3 before creating the other functions
+  StageCode:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt StagingFunction.Arn # the lambda function to run
+      Bucket: !Ref CraftFormHomeBucket # the S3 bucket to stage the code in
+      Version: !Ref CraftFormVersion    # the version of the code to stage
+      Assets:
+        - startup.zip
+        - operations.zip
+
+  # CUSTOM STARTUP RESOURCE - trigger the startup Lambda function to preform connections
   StartupTrigger:
     Type: AWS::CloudFormation::CustomResource
-    DependsOn:
+    DependsOn:    # make sure the API Gateway and it's components are created before running the startup function
       - DiscordApiGateway
       - DiscordApiGatewayIntegration
       - DiscordApiGatewayRoute
       - DiscordApiGatewayStage
       - DiscordApiGatewayPermission
-
+      - StartUpFunction
+      - OperationFunction
     Properties:
       ServiceToken: !GetAtt StartUpFunction.Arn # run this function after the stack is created
