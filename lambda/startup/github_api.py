@@ -116,9 +116,7 @@ def enable_github_actions(github_pat, github_username):
     )
 
     # make sure the request was succesful
-    if (
-        gitResponse.status != 204
-    ):  # GitHub API returns a 204 No Content status code for a successful request to enable Actions
+    if gitResponse.status != 204:  # GitHub API returns a 204 No Content status code for a successful request to enable Actions
         raise Exception(f"Failed to enable GitHub Actions: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("GitHub Actions enabled :)")
@@ -169,9 +167,10 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     )
 
     # make sure the request to push the secret was successful
-    if (
-        gitResponse.status not in [201, 204]
-    ):  # GitHub API returns a 201 Created status code for a new secret and a 204 No Content status code for an updated secret
+    if gitResponse.status not in [
+        201,
+        204,
+    ]:  # GitHub API returns a 201 Created status code for a new secret and a 204 No Content status code for an updated secret
         raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("Secret placed :)")

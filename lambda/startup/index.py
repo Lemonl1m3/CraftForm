@@ -38,9 +38,7 @@ def handler(event, context):
             # ==================================INITIALIZATION=================================
 
             ssm = boto3.client("ssm")  # create a AWS System Manager client to interact with SSM Parameter Store
-            secretsManager = boto3.client(
-                "secretsmanager"
-            )  # create a AWS Secrets Manager client to interact with Secrets Manager
+            secretsManager = boto3.client("secretsmanager")  # create a AWS Secrets Manager client to interact with Secrets Manager
             secrets = secretsManager.get_secret_value(
                 SecretId="craftform-secrets"
             )  # get the secret value for the secret named "craftform-secrets" from Secrets Manager
@@ -49,9 +47,7 @@ def handler(event, context):
             # ================================GITHUB INTEGRATION===============================
             github_pat = secrets_dict["Github-PAT"]  # get the GitHub Personal Access Token from the secrets dictionary
 
-            github_api.fork_repo(
-                github_pat, github_username
-            )  # fork the CraftForm repo into the user's GitHub account and wait for the fork to be ready
+            github_api.fork_repo(github_pat, github_username)  # fork the CraftForm repo into the user's GitHub account and wait for the fork to be ready
 
             github_api.enable_github_actions(github_pat, github_username)  # enable GitHub Actions in the forked repo
 
@@ -75,9 +71,7 @@ def handler(event, context):
                 discord_app_id, awsApi_url, discord_bot_token
             )  # set the API Gateway URL as the interactions endpoint in the Discord
 
-            discord_api.register_slash_commands(
-                discord_app_id, discord_bot_token
-            )  # register the slash commands with the Discord API
+            discord_api.register_slash_commands(discord_app_id, discord_bot_token)  # register the slash commands with the Discord API
 
         # =================================SUCCESS RESPONSE=============================
         response = {
@@ -104,9 +98,7 @@ def handler(event, context):
 
     http.request(  # make an HTTP request to CloudFormation to report the end status
         "PUT",
-        event[
-            "ResponseURL"
-        ],  # cloudformation response URL is given in the event object when the Lambda is invoked by CloudFormation
+        event["ResponseURL"],  # cloudformation response URL is given in the event object when the Lambda is invoked by CloudFormation
         body=json.dumps(response),  # one of the "2" status responses defined above - success or failure
         headers={"Content-Type": "application/json"},
     )

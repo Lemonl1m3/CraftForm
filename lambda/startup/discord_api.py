@@ -121,9 +121,7 @@ def send_discord_api_url(discord_app_id, api_url, discord_bot_token):
 
     # make sure the request was successful
     if discordResponse.status != 200:
-        raise Exception(
-            f"Failed to set Discord interactions endpoint: {discordResponse.status} - {discordResponse.data} :("
-        )
+        raise Exception(f"Failed to set Discord interactions endpoint: {discordResponse.status} - {discordResponse.data} :(")
     else:
         print("API Gateaway URL set on Discord application :)")
 
