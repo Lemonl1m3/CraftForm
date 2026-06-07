@@ -27,9 +27,7 @@ def handler(event, context):
     http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests | have to initalize outside the try statement so it can send Cloudformation responses in case of errors
 
     try:  # wrapping entire function in a try catch block because it makes it catches errors and also ensures when deleting cloudformation state, it deletes early
-        if (
-            event["RequestType"] != "Delete"
-        ):  # make sure the startup script doesn't run on deletion
+        if event["RequestType"] != "Delete":  # make sure the startup script doesn't run on deletion
             # ===============================INJECTED VARIABLES===============================
 
             awsApi_url = os.environ["ApiGatewayUrl"]
@@ -39,31 +37,23 @@ def handler(event, context):
 
             # ==================================INITIALIZATION=================================
 
-            ssm = boto3.client(
-                "ssm"
-            )  # create a AWS System Manager client to interact with SSM Parameter Store
+            ssm = boto3.client("ssm")  # create a AWS System Manager client to interact with SSM Parameter Store
             secretsManager = boto3.client(
                 "secretsmanager"
             )  # create a AWS Secrets Manager client to interact with Secrets Manager
             secrets = secretsManager.get_secret_value(
                 SecretId="craftform-secrets"
             )  # get the secret value for the secret named "craftform-secrets" from Secrets Manager
-            secrets_dict = json.loads(
-                secrets["SecretString"]
-            )  # the secret value is a JSON string
+            secrets_dict = json.loads(secrets["SecretString"])  # the secret value is a JSON string
 
             # ================================GITHUB INTEGRATION===============================
-            github_pat = secrets_dict[
-                "Github-PAT"
-            ]  # get the GitHub Personal Access Token from the secrets dictionary
+            github_pat = secrets_dict["Github-PAT"]  # get the GitHub Personal Access Token from the secrets dictionary
 
             github_api.fork_repo(
                 github_pat, github_username
             )  # fork the CraftForm repo into the user's GitHub account and wait for the fork to be ready
 
-            github_api.enable_github_actions(
-                github_pat, github_username
-            )  # enable GitHub Actions in the forked repo
+            github_api.enable_github_actions(github_pat, github_username)  # enable GitHub Actions in the forked repo
 
             github_api.push_secretsTo_github(
                 github_pat, github_username, gitRole_arn
@@ -79,9 +69,7 @@ def handler(event, context):
 
             # =================================DISCORD INTEGRATION=============================
 
-            discord_bot_token = secrets_dict[
-                "Discord-Bot-Token"
-            ]  # get the bot token from Secret Manager
+            discord_bot_token = secrets_dict["Discord-Bot-Token"]  # get the bot token from Secret Manager
 
             discord_api.send_discord_api_url(
                 discord_app_id, awsApi_url, discord_bot_token
@@ -119,8 +107,6 @@ def handler(event, context):
         event[
             "ResponseURL"
         ],  # cloudformation response URL is given in the event object when the Lambda is invoked by CloudFormation
-        body=json.dumps(
-            response
-        ),  # one of the "2" status responses defined above - success or failure
+        body=json.dumps(response),  # one of the "2" status responses defined above - success or failure
         headers={"Content-Type": "application/json"},
     )

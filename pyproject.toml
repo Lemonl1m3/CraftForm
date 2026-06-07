@@ -2,7 +2,5 @@
 #                              RUFF CONFIGURATION
 # ==========================================================================================
 
-[
-    tool.ruff
-]
-line-length = 120   # change the threshold of characters per line
+[tool.ruff]
+line-length = 160   # change the threshold of characters per line

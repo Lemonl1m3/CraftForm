@@ -19,9 +19,7 @@ from base64 import b64encode
 # ==========================================================================================
 #                           SETUP CLIENTS AND GLOBAL VARIABLES
 # ==========================================================================================
-http = (
-    urllib3.PoolManager()
-)  # create a new HTTP connection pool manager to make HTTP requests
+http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests
 
 
 # ==========================================================================================
@@ -72,9 +70,7 @@ def fork_repo(github_pat, github_username):
 
     # make sure the request was successful
     if gitResponse.status != 202:
-        raise Exception(
-            f"Failed to fork repo: {gitResponse.status} - {gitResponse.data} :("
-        )
+        raise Exception(f"Failed to fork repo: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("Repo forked successfully :)")
 
@@ -123,9 +119,7 @@ def enable_github_actions(github_pat, github_username):
     if (
         gitResponse.status != 204
     ):  # GitHub API returns a 204 No Content status code for a successful request to enable Actions
-        raise Exception(
-            f"Failed to enable GitHub Actions: {gitResponse.status} - {gitResponse.data} :("
-        )
+        raise Exception(f"Failed to enable GitHub Actions: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("GitHub Actions enabled :)")
 
@@ -145,9 +139,7 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
 
     # make sure the public key request was successful
     if keyResponse.status != 200:
-        raise Exception(
-            f"Failed to get public key: {keyResponse.status} - {keyResponse.data} :("
-        )
+        raise Exception(f"Failed to get public key: {keyResponse.status} - {keyResponse.data} :(")
     else:
         print("Public key came back :)")
 
@@ -157,9 +149,7 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     # Key ID     - included in the request to GitHub when pushing the secret
     keyData = json.loads(keyResponse.data.decode("utf-8"))
     public_key = keyData["key"]  # the public key to encrypt secrets with
-    key_id = keyData[
-        "key_id"
-    ]  # the key ID to include in the request to GitHub when pushing secrets
+    key_id = keyData["key_id"]  # the key ID to include in the request to GitHub when pushing secrets
 
     # encrypt the GitHub secret  with the public key
     # GitHub requires that all secrets pushed to GitHub are encrypted with the Public Key captured
@@ -182,8 +172,6 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     if (
         gitResponse.status not in [201, 204]
     ):  # GitHub API returns a 201 Created status code for a new secret and a 204 No Content status code for an updated secret
-        raise Exception(
-            f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :("
-        )
+        raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("Secret placed :)")

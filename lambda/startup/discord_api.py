@@ -16,9 +16,7 @@ import json
 # ==========================================================================================
 #                          SETUP CLIENTS AND GLOBAL VARIABLES
 # ==========================================================================================
-http = (
-    urllib3.PoolManager()
-)  # create a new HTTP connection pool manager to make HTTP requests
+http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests
 
 slash_commands = [
     # -------------------------------SERVER COMMAND--------------------------------
@@ -145,8 +143,6 @@ def register_slash_commands(discord_app_id, discord_bot_token):
 
     # make sure the request was successful
     if discordResponse.status != 200:
-        raise Exception(
-            f"Failed to register slash commands: {discordResponse.status} - {discordResponse.data} :("
-        )
+        raise Exception(f"Failed to register slash commands: {discordResponse.status} - {discordResponse.data} :(")
     else:
         print("Slash commands registered with Discord :)")
