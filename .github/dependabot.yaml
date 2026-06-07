@@ -10,13 +10,13 @@ updates:
 
   # scan the requirements.txt and dependencies for vulnerabilities or updates
   - package-ecosystem: 'pip'
-    directory: "lambda/startup"
+    directory: "/lambda/startup"
     schedule:
       interval: 'weekly'
 
   # scan the requirements.txt and dependencies for vulnerabilities or updates
   - package-ecosystem: 'pip'
-    directory: 'lambda/operations'
+    directory: '/lambda/operations'
     schedule:
       interval: 'weekly'
 
