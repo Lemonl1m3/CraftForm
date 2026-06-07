@@ -11,6 +11,8 @@ name: Lambda-CI
 on:
   # run on other workflow calls
   workflow_call:
+  # manual trigger
+  workflow_dispatch:
     
 permissions:
   contents: read
@@ -66,4 +68,3 @@ jobs:
       - name: Security Scan
         run: bandit -r . -ll
 
-  
