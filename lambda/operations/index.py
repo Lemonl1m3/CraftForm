@@ -13,7 +13,6 @@ import json
 import base64
 import boto3
 from nacl.signing import VerifyKey  # cryptographic library for verifying signatures
-from nacl.exceptions import BadSignatureError  # exception raised when signature verification fails
 
 # ==========================================================================================
 #                           SETUP CLIENTS AND GLOBAL VARIABLES
