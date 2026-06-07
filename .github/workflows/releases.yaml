@@ -68,6 +68,7 @@ jobs:
             pip install -r lambda/$function/requirements.txt -t lambda-build/$function \
               --platform manylinux2014_x84_64 \
               --python-version 3.12 \
+              --only-binary=:all:
 
             # --copy the lambda function code into the build directory
             cp lambda/$function/*.py lambda-build/$function/
