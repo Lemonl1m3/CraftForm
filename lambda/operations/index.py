@@ -1,29 +1,29 @@
-#╔══════════════════════════════════════════════════════════════════════════════╗
-#║                               CraftForm                                      ║
-#╠══════════════════════════════════════════════════════════════════════════════╣
-#║  OPERATIONS LAMBDA  ::  index.py                                             ║
-#║  Handles all incoming Discord interactions for CraftForm.                    ║
-#║  Verifies signatures, answers pings, and routes slash commands.              ║
-#╚══════════════════════════════════════════════════════════════════════════════╝
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                               CraftForm                                      ║
+# ╠══════════════════════════════════════════════════════════════════════════════╣
+# ║  OPERATIONS LAMBDA  ::  index.py                                             ║
+# ║  Handles all incoming Discord interactions for CraftForm.                    ║
+# ║  Verifies signatures, answers pings, and routes slash commands.              ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
-#==========================================================================================
+# ==========================================================================================
 #                            IMPORTS AND DEPENDENCIES
-#==========================================================================================
+# ==========================================================================================
 import json
 import base64
 import boto3
 from nacl.signing import VerifyKey  #cryptographic library for verifying signatures
 from nacl.exceptions import BadSignatureError   # exception raised when signature verification fails
 
-#==========================================================================================
+# ==========================================================================================
 #                           SETUP CLIENTS AND GLOBAL VARIABLES
-#==========================================================================================
+# ==========================================================================================
 ssm = boto3.client("ssm")   # create the AWS SSM Parameter store client
 discord_public_key = ssm.get_parameter(Name="/craftform/config/discord/public-key")["Parameter"]["Value"]   # get the Discord public key
 
-#==========================================================================================
+# ==========================================================================================
 #                    VERIFY DISCORD SIGNATURE AND HANDLE INTERACTIONS
-#==========================================================================================
+# ==========================================================================================
 def verify_signature(event, rawBody, public_key):
 
     signature = event["headers"]["x-signature-ed25519"]  # get the signature from the request headers
@@ -40,14 +40,14 @@ def verify_signature(event, rawBody, public_key):
 
 
 
-#==========================================================================================
+# ==========================================================================================
 #                                 DISCORD API INTERACTIONS
-#==========================================================================================
+# ==========================================================================================
 def handler(event, context):
 
     print("Received event:", json.dumps(event))  # log the incoming event for debugging
     
-    #====================================VERIFY DISCORD SIGNATURE================================
+    # ====================================VERIFY DISCORD SIGNATURE================================
 
     rawBody = event["body"]  # capture the raw body of the request FIRST because sometime the api gateway changes it
 
@@ -80,14 +80,14 @@ def handler(event, context):
         }
     
 
-    #====================================HANDLE SLASH COMMANDS===================================
+    # ====================================HANDLE SLASH COMMANDS===================================
     if body["type"] == 2:
 
         command = body["data"]["name"]  # capture the slash command
         subcommand = body["data"]["options"][0]["name"]  # capture the slash command's subcommand - words are fun
 
 
-        #--------------------------------SERVER COMMANDS--------------------------------
+        # --------------------------------SERVER COMMANDS--------------------------------
         if command == "server":
             if subcommand == "start":
                 return {

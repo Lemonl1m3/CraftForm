@@ -1,29 +1,32 @@
-#╔══════════════════════════════════════════════════════════════════════════════╗
-#║                               CraftForm                                      ║
-#╠══════════════════════════════════════════════════════════════════════════════╣
-#║  STARTUP LAMBDA  ::  github_api.py                                           ║
-#║  Handles all GitHub API interactions during initial deployment.              ║
-#║  Forks repo, enables Actions, and pushes AWS secrets.                        ║
-#╚══════════════════════════════════════════════════════════════════════════════╝
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                               CraftForm                                      ║
+# ╠══════════════════════════════════════════════════════════════════════════════╣
+# ║  STARTUP LAMBDA  ::  github_api.py                                           ║
+# ║  Handles all GitHub API interactions during initial deployment.              ║
+# ║  Forks repo, enables Actions, and pushes AWS secrets.                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
 
-#==========================================================================================
+# ==========================================================================================
 #                            IMPORTS AND DEPENDENCIES
-#==========================================================================================
+# ==========================================================================================
 import time
 import json
 import urllib3
 from nacl import encoding, public
 from base64 import b64encode
 
-#==========================================================================================
+# ==========================================================================================
 #                           SETUP CLIENTS AND GLOBAL VARIABLES
-#==========================================================================================
-http = urllib3.PoolManager()    # create a new HTTP connection pool manager to make HTTP requests
+# ==========================================================================================
+http = (
+    urllib3.PoolManager()
+)  # create a new HTTP connection pool manager to make HTTP requests
 
-#==========================================================================================
+
+# ==========================================================================================
 #                          HELPER FUNCTION TO ENCRYPT SECRETS FOR GITHUB
-#==========================================================================================
+# ==========================================================================================
 def encrypt_secret(public_key, secret):
     # decode the Bse64-encoded key GitHub returns
     key = public.PublicKey(public_key.encode("utf-8"), encoding.Base64Encoder())
@@ -37,44 +40,43 @@ def encrypt_secret(public_key, secret):
     # encode the result as base64 so it can be sent as a string
     return b64encode(encrypted).decode("utf-8")
 
-#==========================================================================================
+
+# ==========================================================================================
 #                          GITHUB API INTERACTIONS
-#==========================================================================================
+# ==========================================================================================
 def fork_repo(github_pat, github_username):
     # make a http GET request to ask Github if the repo already exists in the user's account
     gitResponse = http.request(
-         "GET",
-         f"https://api.github.com/repos/{github_username}/CraftForm",
-
-         headers = {
-             "Authorization": f"token {github_pat}",
-             "Accept": "application/vnd.github.v3+json"
-        }
+        "GET",
+        f"https://api.github.com/repos/{github_username}/CraftForm",
+        headers={
+            "Authorization": f"token {github_pat}",
+            "Accept": "application/vnd.github.v3+json",
+        },
     )
     # if the repo already exists, skip the forking process
     if gitResponse.status == 200:
         print("Repo already forked :)")
         return
-    
+
     # fork the CrafForm repo into the user's GitHub account using the Github API and provided PAT
     gitResponse = http.request(
-
         "POST",
-        "https://api.github.com/repos/Liamade/CraftForm/forks",    # the repo to fork - Liamade/CraftForm
-
+        "https://api.github.com/repos/Liamade/CraftForm/forks",  # the repo to fork - Liamade/CraftForm
         # authenticate the request with the Github PAT and specify that we want to use the GitHub API v3
         headers={
-            "Authorization": f"token {github_pat}",   # this request is coming from particular user - use PAT for authentication
-            "Accept": "application/vnd.github.v3+json"  # we want the response in the format of GitHub API v3
-        }
+            "Authorization": f"token {github_pat}",  # this request is coming from particular user - use PAT for authentication
+            "Accept": "application/vnd.github.v3+json",  # we want the response in the format of GitHub API v3
+        },
     )
 
     # make sure the request was successful
     if gitResponse.status != 202:
-        raise Exception(f"Failed to fork repo: {gitResponse.status} - {gitResponse.data} :(")
+        raise Exception(
+            f"Failed to fork repo: {gitResponse.status} - {gitResponse.data} :("
+        )
     else:
         print("Repo forked successfully :)")
-
 
     # check and make sure that GitHub fork has finished
     for i in range(10):
@@ -82,21 +84,21 @@ def fork_repo(github_pat, github_username):
         gitResponse = http.request(
             "GET",
             f"https://api.github.com/repos/{github_username}/CraftForm",  # check the forked repo in the user's account
-
-            headers = {
+            headers={
                 "Authorization": f"token {github_pat}",
-                "Accept": "application/vnd.github.v3+json"
-            }
+                "Accept": "application/vnd.github.v3+json",
+            },
         )
         if gitResponse.status == 200:
             print("Fork is ready :)")
             break
-               
+
         print("Fork still combombulating, waiting...")
-        print(f"Attempt: {i+1}")
-        time.sleep(3) # wait for a few seconds before checking again
+        print(f"Attempt: {i + 1}")
+        time.sleep(3)  # wait for a few seconds before checking again
     else:
         raise Exception("Forking took too long :(")
+
 
 def enable_github_actions(github_pat, github_username):
 
@@ -104,24 +106,29 @@ def enable_github_actions(github_pat, github_username):
     gitResponse = http.request(
         "PUT",
         f"https://api.github.com/repos/{github_username}/CraftForm/actions/permissions",
-        
-        headers= {
+        headers={
             "Authorization": f"token {github_pat}",
             "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json"   # says "I'm sending JSON data in the body of this request"
+            "Content-Type": "application/json",  # says "I'm sending JSON data in the body of this request"
         },
-
-        body=json.dumps({
-            "enabled": True,  # enable GitHub Actions in the forked repo
-            "allowed_actions": "all"  # allow all actions in GitHub Actions
-        })
+        body=json.dumps(
+            {
+                "enabled": True,  # enable GitHub Actions in the forked repo
+                "allowed_actions": "all",  # allow all actions in GitHub Actions
+            }
+        ),
     )
 
     # make sure the request was succesful
-    if gitResponse.status != 204:  # GitHub API returns a 204 No Content status code for a successful request to enable Actions
-        raise Exception(f"Failed to enable GitHub Actions: {gitResponse.status} - {gitResponse.data} :(")
+    if (
+        gitResponse.status != 204
+    ):  # GitHub API returns a 204 No Content status code for a successful request to enable Actions
+        raise Exception(
+            f"Failed to enable GitHub Actions: {gitResponse.status} - {gitResponse.data} :("
+        )
     else:
         print("GitHub Actions enabled :)")
+
 
 def push_secretsTo_github(github_pat, github_username, role_arn):
 
@@ -130,16 +137,17 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     keyResponse = http.request(
         "GET",
         f"https://api.github.com/repos/{github_username}/CraftForm/actions/secrets/public-key",  # get the public key for encrypting secrets in GitHub
-
-        headers = {
+        headers={
             "Authorization": f"token {github_pat}",
             "Accept": "application/vnd.github.v3+json",
-        }
+        },
     )
 
     # make sure the public key request was successful
     if keyResponse.status != 200:
-        raise Exception(f"Failed to get public key: {keyResponse.status} - {keyResponse.data} :(")
+        raise Exception(
+            f"Failed to get public key: {keyResponse.status} - {keyResponse.data} :("
+        )
     else:
         print("Public key came back :)")
 
@@ -147,9 +155,11 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     # we capture both the public key and the key ID
     # Public Key - used to encrypt the secret before sending it to GitHub
     # Key ID     - included in the request to GitHub when pushing the secret
-    keyData    = json.loads(keyResponse.data.decode("utf-8"))
+    keyData = json.loads(keyResponse.data.decode("utf-8"))
     public_key = keyData["key"]  # the public key to encrypt secrets with
-    key_id     = keyData["key_id"]  # the key ID to include in the request to GitHub when pushing secrets
+    key_id = keyData[
+        "key_id"
+    ]  # the key ID to include in the request to GitHub when pushing secrets
 
     # encrypt the GitHub secret  with the public key
     # GitHub requires that all secrets pushed to GitHub are encrypted with the Public Key captured
@@ -160,20 +170,20 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     gitResponse = http.request(
         "PUT",
         f"https://api.github.com/repos/{github_username}/CraftForm/actions/secrets/AWS_ROLE_ARN",  # name of the secret in GitHub - AWS_ROLE_ARN
-
-        headers = {
+        headers={
             "Authorization": f"token {github_pat}",
             "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json"  
+            "Content-Type": "application/json",
         },
-        body=json.dumps({
-            "encrypted_value": encrypted_secret,
-            "key_id": key_id
-        })
+        body=json.dumps({"encrypted_value": encrypted_secret, "key_id": key_id}),
     )
 
     # make sure the request to push the secret was successful
-    if gitResponse.status not in [201, 204]:  # GitHub API returns a 201 Created status code for a new secret and a 204 No Content status code for an updated secret
-        raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
+    if (
+        gitResponse.status not in [201, 204]
+    ):  # GitHub API returns a 201 Created status code for a new secret and a 204 No Content status code for an updated secret
+        raise Exception(
+            f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :("
+        )
     else:
         print("Secret placed :)")

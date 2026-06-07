@@ -1,10 +1,10 @@
-#╔══════════════════════════════════════════════════════════════════════════════╗
-#║                              CraftForm                                       ║
-#╠══════════════════════════════════════════════════════════════════════════════╣
-#║  CONFIG  ::  .checkov.yaml                                                   ║
-#║  This is the config for checkov that preforms iac security check             ║
-#║  This specifies what to look for and what frameworks are being used          ║
-#╚══════════════════════════════════════════════════════════════════════════════╝
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                              CraftForm                                       ║
+# ╠══════════════════════════════════════════════════════════════════════════════╣
+# ║  CONFIG  ::  .checkov.yaml                                                   ║
+# ║  This is the config for checkov that preforms iac security check             ║
+# ║  This specifies what to look for and what frameworks are being used          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 #  scan from the repo root
 directory:
   - .
