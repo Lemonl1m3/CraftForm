@@ -24,3 +24,18 @@ soft-fail: true
 # security issues to skip
 skip-check:
   - CKV_AWS_25  # minecraft servers having port 25565 open intentially
+  - CKV_AWS_62   # GithubActionsRole broad Action:* — scoped to craftform-tagged resources; to be tightened in future
+  - CKV_AWS_109  # GithubActionsRole permissions management — same as above, tag-scoped
+  - CKV_AWS_111  # IAM write access — LambdaOperationRole is constrained via tag conditions checkov cannot evaluate statically
+  - CKV_AWS_116  # Lambda DLQ — all Lambdas are invoked synchronously; DLQ only applies to async invocations
+  - CKV_AWS_117  # Lambda in VPC — intentional; Lambdas require internet access for Discord/GitHub APIs
+  - CKV_AWS_115  # Lambda concurrency limit — personal deployment; account limit provides sufficient protection
+  - CKV_AWS_173  # Lambda env var encryption — AWS-managed KMS key applied by default; CMK not justified
+  - CKV_AWS_145  # S3 KMS CMK — AWS-managed SSE applied by default; CMK overhead not justified at this scale
+  - CKV_AWS_149  # Secrets Manager KMS CMK — same reasoning as S3
+  - CKV_AWS_144  # S3 cross-region replication — world bucket is transient per-server storage, not critical data
+  - CKV_AWS_21   # S3 versioning — world state managed by inotify sync, not S3 versioning
+  - CKV_AWS_18   # S3 access logging — neither bucket requires audit logging at this scale
+  - CKV2_AWS_62  # S3 event notifications — world sync handled by inotify on EC2, not S3 events
+  - CKV2_AWS_61  # S3 lifecycle — world files managed by inotify sync
+  - CKV_AWS_95   # API Gateway access logging — Lambda CloudWatch logs cover observability needs
