@@ -544,7 +544,7 @@ Resources:
       Code:
         ZipFile: | 
           import urllib.request, boto3
-          impot cfnresponse
+          import cfnresponse
           
           # start a aws s3 client to stage the code in S3
           s3 = boto3.client('s3')
