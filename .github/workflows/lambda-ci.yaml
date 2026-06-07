@@ -54,7 +54,7 @@ jobs:
 
       # checks formatting using ruff in read-only mode. fails if ruff would change anything
       - name: Check Formatting
-        run: ruff format --check .
+        run: ruff format --diff .
       
       # performs a lint check on the code using lint
       - name: Lint

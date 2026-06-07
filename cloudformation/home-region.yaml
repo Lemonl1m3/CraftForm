@@ -665,7 +665,6 @@ Resources:
       - DiscordApiGatewayRoute
       - DiscordApiGatewayStage
       - DiscordApiGatewayPermission
-      - StartUpFunction
       - OperationFunction
     Properties:
       ServiceToken: !GetAtt StartUpFunction.Arn # run this function after the stack is created
