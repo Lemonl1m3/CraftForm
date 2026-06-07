@@ -1,0 +1,69 @@
+#╔══════════════════════════════════════════════════════════════════════════════╗
+#║                              CraftForm                                       ║
+#╠══════════════════════════════════════════════════════════════════════════════╣
+#║  WORKFLOW  ::  lambda-ci.yaml                                                ║
+#║  Preforms automated code checks on the lambda python code                    ║
+#║  Acts as a child workflow to be called in other workflows                    ║
+#╚══════════════════════════════════════════════════════════════════════════════╝
+
+name: Lambda-CI
+
+on:
+  # run on other workflow calls
+  workflow_call:
+    
+permissions:
+  contents: read
+
+jobs:
+
+  quality:
+    name: Quality - ${{ matrix.package }}
+    runs-on: ubuntu-latest
+
+    # matrix the workflow between both the startup and operations code
+    strategy:
+      fail-fast: false    # make sure if one matrix fails, the other one runs too
+      matrix:
+        package: [
+          startup,
+          operations
+        ]
+
+    # the working directory for the specific code matrix
+    defaults:
+      run:
+        working-directory: lambda/${{ matrix.package }}
+    
+    steps:
+
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      
+      # install everything needed for the ci from the requirements-dev.txt
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements-dev.txt   
+
+      # checks formatting using ruff in read-only mode. fails if ruff would change anything
+      - name: Check Formatting
+        run: ruff format --check .
+      
+      # performs a lint check on the code using lint
+      - name: Lint
+        run: ruff check .
+      
+      # reads type annotations and catches type mismatches (needs boto3-stubs for aws client calls)
+      - name: Type Check
+        run: mypy .
+      
+      # performs a basic security scan on all the python files and ignore low-level severity
+      - name: Security Scan
+        run: bandit -r . -ll
+
+  

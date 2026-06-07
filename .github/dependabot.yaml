@@ -1,0 +1,27 @@
+#╔══════════════════════════════════════════════════════════════════════════════╗
+#║                              CraftForm                                       ║
+#╠══════════════════════════════════════════════════════════════════════════════╣
+#║  DEPENDABOT  ::  dependabot.yaml                                             ║
+#║  Preforms automated dependency and security checks                           ║
+#║  Checks to make sure there aren't newer version for actions and dependenceies║
+#╚══════════════════════════════════════════════════════════════════════════════╝
+version: 2
+updates:
+
+  # scan the requirements.txt and dependencies for vulnerabilities or updates
+  - package-ecosystem: 'pip'
+    directory: "lambda/startup"
+    schedule:
+      interval: 'weekly'
+
+  # scan the requirements.txt and dependencies for vulnerabilities or updates
+  - package-ecosystem: 'pip'
+    directory: 'lambda/operations'
+    schedule:
+      interval: 'weekly'
+
+  # check the versions of github actions and workflows
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'

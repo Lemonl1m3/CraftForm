@@ -1,0 +1,26 @@
+#╔══════════════════════════════════════════════════════════════════════════════╗
+#║                              CraftForm                                       ║
+#╠══════════════════════════════════════════════════════════════════════════════╣
+#║  CONFIG  ::  .checkov.yaml                                                   ║
+#║  This is the config for checkov that preforms iac security check             ║
+#║  This specifies what to look for and what frameworks are being used          ║
+#╚══════════════════════════════════════════════════════════════════════════════╝
+#  scan from the repo root
+directory:
+  - .
+
+# what languages/frameworks to check and scan for
+framwork:
+  - terraform
+  - cloudformation
+
+
+compact: true   # shorter output
+quiet: true   # only show failures
+
+# fail doesn't fail the ci | change when in full release
+soft-fail: true
+
+# security issues to skip
+skip-check:
+  - CKV_AWS_25  # minecraft servers having port 25565 open intentially

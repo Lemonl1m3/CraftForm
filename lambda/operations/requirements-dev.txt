@@ -1,0 +1,13 @@
+#=====================================================================
+#                        CI - DEPENDENCIES
+#=====================================================================
+
+
+
+-r requirements.txt     # install the dependencies for the lambda code too
+
+
+ruff    
+mypy
+boto3-stubs[essential]  # gives mypy the stubs for boto3
+bandit

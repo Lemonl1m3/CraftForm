@@ -1,3 +1,143 @@
+#╔══════════════════════════════════════════════════════════════════════════════╗
+#║                              CraftForm                                       ║
+#╠══════════════════════════════════════════════════════════════════════════════╣
+#║  WORKFLOW  ::  ci-all.yaml                                                   ║
+#║  Preforms automated code checks on the code pushed into main branch          ║
+#║  Helps Lint, Security Check, and basic validation for all the code           ║
+#╚══════════════════════════════════════════════════════════════════════════════╝
+
+name: CI (all)
 
 
-name: Continuous Integration
+#============================================================
+#                 TRIGGER SETTINGS
+#============================================================
+on:
+  # manual trigger
+  workflow_dispatch:
+  # trigger on pushes into the main branch
+  push:
+    branches: [main]
+  # trigger on pull requests
+  pull_request:
+
+# one run per branch: stop overlapping runs and cancel the older run if needed
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# least privilege: read permissions for the git token
+permissions:
+  contents: read
+
+#============================================================
+#                 JOB EXECUTION
+#============================================================
+jobs:
+
+  #===============================CLOUDFORMATION===============================
+  cloudformation:
+    name: CloudFormation Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install cfn-lint
+        run: pip install cfn-lint
+
+      - name: Lint CloudFormation Templates
+        run: cfn-lint ./cloudformation/*.yaml
+  
+  #==================================TERRAFORM=================================
+  terraform:
+    name: Terraform Validate & Lint
+    runs-on: ubuntu-latest
+
+    defaults: 
+      run:
+        working-directory: terraform  # every job/step runs in the terraform directory
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check Formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize (no backend)
+        run: terraform init -backend=false
+
+      - name: Validate
+        run: terraform validate
+
+      # download a terraform linter
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: v0.62.1
+
+      # configure the tflint and install plugins using terraform/.tflint.hcl to better lint for aws
+      - name: Init TFLint Plugins
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # helps avoid plugin-download rate limits
+        
+      - name: Run TFLint
+        run: tflint --recursive --format compact
+  #================================LAMBDA PYTHON===============================
+  lambda:
+    name: Lambda CI
+    uses: ./.github/workflows/lambda-ci.yaml 
+
+
+  #==================================SECURITY==================================
+  secrets:
+    name: Secret Checking
+    runs-on: ubuntu-latest
+    # set new permissions to be able to write
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # pull full history
+
+      # scan for particular secrets
+      - name: Scan for Secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  checkov:
+    name: IAC-Security
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Checkov
+        run: |
+          pip install checkov
+      
+      - name: Run Checkov IAC Check
+        run: |
+          checkov --config-file .checkov.yaml
