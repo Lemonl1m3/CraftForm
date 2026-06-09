@@ -8,6 +8,6 @@ plugin "terraform" {
 
 plugin "aws" {
   enabled = true
-  version = "0.x.x"   # ← put the current version from the tflint-ruleset-aws releases page
+  version = "0.x.x"
   source  = "github.com/terraform-linters/tflint-ruleset-aws"
 }
