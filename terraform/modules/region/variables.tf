@@ -4,4 +4,8 @@
 variable "region" {
   description = "The region that the infra is getting deployed in"
 }
-# =================================MODULE VARIABLES=================================
+
+variable "aws_id"{
+  description = "The AWS ID for the user"
+  type        = string
+}
