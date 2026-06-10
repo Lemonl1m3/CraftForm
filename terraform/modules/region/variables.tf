@@ -1,7 +1,7 @@
 
 
-
-variable "bucket_name" {
-  description = "The name of the S3 bucket to create"
-  type        = string
+# ==================================ROOT VARIABLES==================================
+variable "region" {
+  description = "The region that the infra is getting deployed in"
 }
+# =================================MODULE VARIABLES=================================

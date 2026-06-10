@@ -11,7 +11,7 @@
 #===============================BUCKET CREATION===============================
 resource "aws_s3_bucket" "bucket" {
 
-  bucket = var.bucket_name  # bucket names from variables.tf
+  bucket = "craftform-${var.region}"  # bucket names from variables.tf
 
 }
 #==============================BUCKET VERSIONING==============================
