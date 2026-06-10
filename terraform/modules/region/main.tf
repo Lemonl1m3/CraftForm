@@ -15,6 +15,7 @@ resource "aws_s3_bucket" "world_data_bucket" {
 
 }
 # ==============================BUCKET VERSIONING==============================
+# this is kind of unneeded since versioning is disabled by default but i like to be explicit
 resource "aws_s3_bucket_versioning" "versioning" {
 
   bucket = aws_s3_bucket.world_data_bucket.id  # specificying the bucket created above
@@ -25,7 +26,6 @@ resource "aws_s3_bucket_versioning" "versioning" {
 
 }
 # ==============================PUBLIC ACCESS BLOCK=============================
-
 # prevent public access to the bucket via ACLs at the account/bucket level
 resource "aws_s3_bucket_public_access_block" "public_access_block" {  
 
@@ -61,4 +61,19 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "encryption"{
     }
   }
 
+}
+
+#==============================================================================
+#                                   VPC
+#==============================================================================
+#       The VPC is the virtual network that everything that needs to be 
+#  reachable via the internet is in (ec2, s3 gateawy, subnets, etc.)
+#-----------------------------------------------------------------------------
+
+resource "aws_vpc" "main_vpc"{
+  # kind of a huge cidr block, but doesn't really matter and it's something that
+  # will never run out and people can just go crazy with
+  cidr_block = "10.0.0.0/16"
+
+  enable_dns_hostnames = true   # needed for ssm session manager
 }
