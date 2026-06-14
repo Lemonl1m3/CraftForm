@@ -69,11 +69,53 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "encryption"{
 #       The VPC is the virtual network that everything that needs to be 
 #  reachable via the internet is in (ec2, s3 gateawy, subnets, etc.)
 #-----------------------------------------------------------------------------
-
+# =================================VPC CREATION================================
 resource "aws_vpc" "main_vpc"{
   # kind of a huge cidr block, but doesn't really matter and it's something that
   # will never run out and people can just go crazy with
   cidr_block = "10.0.0.0/16"
 
   enable_dns_hostnames = true   # needed for ssm session manager
+}
+# ==================================AWS ZONES==================================
+data "aws_availability_zones" "available" {
+
+  state = "available" # get the aws zones that are available to the region
+}
+
+# build out a little map for the aws zones
+locals {
+
+  # pair each aws zone with it's own cidr
+  public_subnets = {
+    for index, az in data.aws_availability_zones.available.names :
+      az => cidrsubnet(aws_vpc.main_vpc.cidr_block, 10, index) # each az name (key) gets a cidr block (value)
+  }
+
+}
+# ================================PUBLIC SUBNETS================================
+# one public subnet per AZ
+resource "aws_subnet" "public" {
+
+  for_each                 = local.public_subnets # computed for each entry in public_subnets
+  vpc_id                   = aws_vpc.main_vpc.id  # the vpc that the subnets are deployed into
+  availability_zone        = each.key   # the name of the 'n' availability zone
+  cidr_block               = each.value # the cidr block of the 'n' availability zone
+  map_public_ip_on_launch  = true     # gives resources deployed into subnet a public IP by default
+}
+# =====================================IGW=====================================
+resource "aws_internet_gateway" "main_gw" {
+  vpc_id = aws_vpc.main_vpc.id
+}
+# =================================ROUTE TABLE=================================
+resource "aws_route_table" "main_routeTable" {
+  
+  vpc_id = aws_vpc.main_vpc.id
+
+  # any traffic heading outside of the vpc, direct through the igw
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_gw.id
+  }
+
 }
