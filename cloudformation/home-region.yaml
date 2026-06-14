@@ -347,7 +347,6 @@ Resources:
                 Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !Sub arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/craftform-*:*
 
-
   # STAGER ROLE -- used for staging the Lambda code in S3 before deployment
   StagerRole:
     Type: AWS::IAM::Role
@@ -379,6 +378,7 @@ Resources:
               - Effect: Allow
                 Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/craftform-*:*"
+ 
   # ------------------------------------------S3 STATE BUCKET------------------------------------------
   CraftFormHomeBucket:
     Type: AWS::S3::Bucket

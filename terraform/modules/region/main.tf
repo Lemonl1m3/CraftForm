@@ -119,3 +119,114 @@ resource "aws_route_table" "main_routeTable" {
   }
 
 }
+# ==============================ROUTE ASSOCIATIONS==============================
+# link every public subnet to the main route table
+resource "aws_route_table_association" "public" {
+
+  for_each = aws_subnet.public    # for each public subnet created
+  subnet_id = each.value.id       # subnet's id
+  route_table_id = aws_route_table.main_routeTable.id   # point to this route table
+
+}
+# ================================S3 VPC ENDPOINT================================
+resource "aws_vpc_endpoint" "s3" {
+
+  vpc_id = aws_vpc.main_vpc.id
+  service_name = "com.amazonaws.${var.region}.s3" # the resource for the specific region this endpoint reaches
+  vpc_endpoint_type = "Gateway"
+  route_table_ids = [aws_route_table.main_routeTable.id]  # the route table the endpoint gets linked to
+}
+
+#==============================================================================
+#                                 SECURITY
+#==============================================================================
+#       The resources that help control the security going inside and outside
+#  of the home region. Helps dictate traffice and who allows to access resources
+#-----------------------------------------------------------------------------
+# ================================SECURITY GROUP================================
+# the security group to dictate what kind of traffic can reach the ec2 instances
+resource "aws_security_group" "allow_MC" {
+
+  name = "allow_MC"
+  description = "Allow TCP inbound traffic through minecraft port"
+  vpc_id = aws_vpc.main_vpc.id
+
+}
+# INBOUND RULES
+resource "aws_vpc_security_group_ingress_rule" "allow_TCP" {
+
+  security_group_id = aws_security_group.allow_MC.id
+  cidr_ipv4 = "0.0.0.0/0"
+  from_port = 25565
+  ip_protocol = "tcp"
+  to_port = 25565
+}
+# OUTBOUND RULES
+resource "aws_vpc_security_group_egress_rule" "allow_all_out" {
+  security_group_id = aws_security_group.allow_MC.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"   # -1 = all protocols
+}
+
+# ===================================IAM ROLE===================================
+resource "aws_iam_role" "server_role" {
+  name = "minecraft_server_role"
+
+  # only ec2 instances are allowed to assume this role
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement =[
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+# ===============================S3 ACCESS POLICY===============================
+resource "aws_iam_role_policy" "s3_access" {
+  name = "allow_s3_acecss"
+  role = aws_iam_role.server_role.name
+
+  policy = jsonencode ({
+    Version = "2012-10-17"
+    Statement = [
+      # policy to the actual bucket
+      {
+        Sid = "BucketLevel"
+        Effect = "Allow"
+        Action = ["s3:ListBucket"]
+        Resource = aws_s3_bucket.world_data_bucket.arn
+      },
+      # policy to act on objects
+      {
+        Sid = "ObjectLevel"
+        Effect = "Allow"
+        Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource = "${aws_s3_bucket.workd_data_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+# ===============================INSTANCE PROFILE===============================
+# allows ec2 instances to actually assume the iam role
+resource "aws_iam_instance_profile" "server_profile" {
+
+  name = "minecraft_server_profile"
+  role = aws_iam_role.server_role.name
+
+}
+
+# ==============================SSM MANAGED POLICY==============================
+# allow servers to talk outbound to the ssm service so people can "ssh"
+resource "aws_iam_role_policy_attachement" "ssm_core" {
+
+  role = aws_iam_role.server_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+
+}
