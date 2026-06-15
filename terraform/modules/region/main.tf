@@ -1,5 +1,10 @@
-
-
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                              CraftForm                                       ║
+# ╠══════════════════════════════════════════════════════════════════════════════╣
+# ║  TERRAFORM REGION  ::  main.tf                                               ║
+# ║  describes all the resources built within this module                        ║
+# ║  This is called in the root main.tf.                                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
 #==============================================================================
 #                               S3 BUCKET
@@ -169,6 +174,7 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_out" {
 }
 
 # ===================================IAM ROLE===================================
+# this is the role that the ec2 servers assume when created.
 resource "aws_iam_role" "server_role" {
   name = "minecraft_server_role"
 
@@ -188,8 +194,9 @@ resource "aws_iam_role" "server_role" {
   })
 }
 # ===============================S3 ACCESS POLICY===============================
+# inline policy for the iam role specifying access to the s3 bucket
 resource "aws_iam_role_policy" "s3_access" {
-  name = "allow_s3_acecss"
+  name = "allow_s3_access"
   role = aws_iam_role.server_role.name
 
   policy = jsonencode ({
@@ -207,7 +214,7 @@ resource "aws_iam_role_policy" "s3_access" {
         Sid = "ObjectLevel"
         Effect = "Allow"
         Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-        Resource = "${aws_s3_bucket.workd_data_bucket.arn}/*"
+        Resource = "${aws_s3_bucket.world_data_bucket.arn}/*"
       }
     ]
   })
@@ -223,10 +230,29 @@ resource "aws_iam_instance_profile" "server_profile" {
 }
 
 # ==============================SSM MANAGED POLICY==============================
-# allow servers to talk outbound to the ssm service so people can "ssh"
-resource "aws_iam_role_policy_attachement" "ssm_core" {
+# allow servers to talk outbound to the ssm service
+resource "aws_iam_role_policy_attachment" "ssm_core" {
 
   role = aws_iam_role.server_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 
+}
+
+#==============================================================================
+#                            SSM PARAMETER STORE
+#==============================================================================
+#       The resources that are need to be specified in the SSM Parameter store
+#  so the lambda function can create ec2 instances with the right "settings"
+#-----------------------------------------------------------------------------
+# ============================REGION CONFIG (SSM)=============================
+# publish this region's coordinates for the Lambda to read at runtime
+resource "aws_ssm_parameter" "region_config" {
+  name = "/craftform/regions/${var.region}/config"
+  type = "String"
+  value = jsonencode({
+    bucket_name      = aws_s3_bucket.world_data_bucket.bucket
+    security_group   = aws_security_group.allow_MC.id
+    instance_profile = aws_iam_instance_profile.server_profile.name
+    subnet_ids       = { for az, s in aws_subnet.public : az => s.id }
+  })
 }
