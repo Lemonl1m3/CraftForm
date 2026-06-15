@@ -4,7 +4,7 @@
 
 
 
-terraform{
+terraform {
     required_version = ">= 1.11.0"  # has to be greater than or equal to 1.11.0 to do state locking on S3
 
 
@@ -16,7 +16,7 @@ terraform{
         }
     }
     #========================BACKEND CONFIGURATION========================
-    backend "s3"{
+    backend "s3" {
         use_lockfile = true    # enables state locking directly in the S3 bucket
         encrypt      = true     # encrypt state at rest
 
