@@ -14,9 +14,12 @@
 #    super cheap.
 #-----------------------------------------------------------------------------
 # ===============================BUCKET CREATION===============================
+
+data "aws_caller_identity" "current" {}  # capture the aws id 
+
 resource "aws_s3_bucket" "world_data_bucket" {
 
-  bucket = "craftform-${var.region}-${var.aws_id}"  # bucket names from variables.tf
+  bucket = "craftform-${var.region}-${data.aws_caller_identity.current.account_id}"  # bucket names from variables.tf
 
 }
 # ==============================BUCKET VERSIONING==============================
