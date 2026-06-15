@@ -1,0 +1,76 @@
+# ==============================================================================
+# Python
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+.venv/
+venv/
+env/
+
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+dist/
+build/
+*.egg-info/
+*.eggs
+
+# ==============================================================================
+# Ruff
+# ==============================================================================
+.ruff_cache/
+
+# ==============================================================================
+# Terraform
+# ==============================================================================
+.terraform/
+
+# State files contain sensitive infrastructure details — never commit
+*.tfstate
+*.tfstate.backup
+
+# tfvars can contain secrets (API keys, passwords, etc.)
+*.tfvars
+*.tfvars.json
+
+# Local override files are for personal dev tweaks, not shared
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform crash logs
+crash.log
+crash.*.log
+
+# Terraform CLI config
+.terraformrc
+terraform.rc
+
+# ==============================================================================
+# Lambda build artifacts
+# ==============================================================================
+*.zip
+package/
+
+# ==============================================================================
+# Secrets & credentials
+# ==============================================================================
+.env
+.env.*
+*.pem
+*.key
+secrets.yaml
+secrets.json
+
+# ==============================================================================
+# OS
+# ==============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
