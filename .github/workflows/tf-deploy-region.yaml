@@ -1,0 +1,41 @@
+
+
+name: TF - Deploy AWS Region Infrastructure
+
+#============================================================
+#                 TRIGGER SETTINGS
+#============================================================
+on:
+  # MANUAL TRIGGER - lets lambda hit it with github's REST API 
+  workflow_dispatch: 
+    inputs:
+      # specifies which region terraform will be working in
+      region:
+        description: "The region the Infra will be deployed to (don't manual trigger unless you know what you're doing)"
+        required: true
+        type: string
+
+      # whether the workflow is going to create or destroy basically
+      action:
+        type: choice
+        options: [destroy, apply]
+        default: apply
+
+
+#============================================================
+#                 JOB EXECUTION
+#============================================================
+
+jobs:
+  
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    steps:
+
+    # AWS ROLE CONFIGURATION -- assume the AWS role for github actions and establish the initial "connection"
+    - name: Assume AWS Role
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.HOME_REGION }}
