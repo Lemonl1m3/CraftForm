@@ -51,8 +51,6 @@ def handler(event, context):
         # ON SUCCESS
         return {"status": "commands registered :)"}  # staging only tells the user "done" once this comes back clean
 
-
-
     # ========================================STARTUP PATH========================================
 
     http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests | have to initalize outside the try statement so it can send Cloudformation responses in case of errors
@@ -84,9 +82,7 @@ def handler(event, context):
             github_api.enable_github_actions(github_pat, github_username)  # enable GitHub Actions in the forked repo
 
             # -- push variables to github
-            github_api.push_varTo_github(
-                github_pat, github_username, aws_region, "HOME_REGION"
-            )   # home region variable
+            github_api.push_varTo_github(github_pat, github_username, aws_region, "HOME_REGION")  # home region variable
 
             github_api.push_secretsTo_github(
                 github_pat, github_username, gitRole_arn

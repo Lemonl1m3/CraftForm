@@ -6,12 +6,12 @@
 
 
 
-provider "aws" {    # where Terraform should deploy to
+provider "aws" { # where Terraform should deploy to
 
-  region = var.region   # what region Terraform knows to deploy to
+  region = var.region # what region Terraform knows to deploy to
 
 
-  default_tags {    # tagging for all the created resources -- really useful for the IAM policy
+  default_tags { # tagging for all the created resources -- really useful for the IAM policy
     tags = {
       "Project" = "craftForm"
     }
@@ -23,9 +23,9 @@ provider "aws" {    # where Terraform should deploy to
 
 
 module "region" {
-  source = "./modules/region"   # call the region module
+  source = "./modules/region" # call the region module
 
-  region = var.region   # mainly for naming conventions
+  region = var.region # mainly for naming conventions
 
-  
+
 }

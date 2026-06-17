@@ -176,50 +176,40 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
         print("Secret placed :)")
 
 
-
 def push_varTo_github(github_pat, github_username, var, varName):
 
     # do a POST request to put a new variable in the repo
     varResponse = http.request(
         "POST",
         f"https://api.github.com/repos/{github_username}/CraftForm/actions/variables",
-        headers = {
-            "Authorization": f"token {github_pat}",
-            "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json"
-        },
-        body = json.dumps({
-            "name": varName,
-            "value": var
-        })
+        headers={"Authorization": f"token {github_pat}", "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json"},
+        body=json.dumps({"name": varName, "value": var}),
     )
 
-    # get the response code
+    # ALREADY EXISTS RESPONSE
     if varResponse.status == 409:
+        
         print("Variable already exists, patching the variable instead")
 
         # do a patch request since 409 means the variable already exists
         patchResponse = http.request(
             "PATCH",
             f"https://api.github.com/repos/{github_username}/CraftForm/actions/variables/{varName}",
-            headers = {
-                "Authorization": f"token {github_pat}",
-                "Accept": "application/vnd.github.v3+json",
-                "Content-Type": "application/json"
-            },
-            body = json.dumps({
-                "value": var
-            })
+            headers={"Authorization": f"token {github_pat}", "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json"},
+            body=json.dumps({"value": var}),
         )
 
+        # FAILURE REPONSE - PATCH
         if patchResponse.status != 204:
             raise Exception(f"Failed to update {varName}: {patchResponse.status} - {patchResponse.data} :(")
+        
+        # SUCCESS REPONSE
         else:
             print(f"Successfully updated {varName} :)")
-            
-
+    
+    # SUCCESS REPONSE
     elif varResponse.status == 201:
         print(f"Succesfully placed {varName} :)")
+    # FAILURE REPONSE - POST
     else:
         raise Exception(f"Failed to update {varName}: {varResponse.status} - {varResponse.data} :(")
-
