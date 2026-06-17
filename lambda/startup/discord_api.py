@@ -12,85 +12,14 @@
 # ==========================================================================================
 import urllib3
 import json
+from pathlib import Path
 
 # ==========================================================================================
 #                          SETUP CLIENTS AND GLOBAL VARIABLES
 # ==========================================================================================
 http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests
 
-slash_commands = [
-    # -------------------------------SERVER COMMAND--------------------------------
-    {
-        "name": "server",
-        "description": "Manage your CraftForm Servers",
-        "options": [
-            {
-                "name": "create",
-                "description": "Create a new CraftForm Server",
-                "type": 1,
-            },
-            {"name": "delete", "description": "Delete a CraftForm Server", "type": 1},
-            {"name": "start", "description": "Start a CraftForm Server", "type": 1},
-            {"name": "stop", "description": "Stop a CraftForm Server", "type": 1},
-            {
-                "name": "list",
-                "description": "List all your CraftForm Servers",
-                "type": 1,
-            },
-            {
-                "name": "status",
-                "description": "Get the status of a CraftForm Server",
-                "type": 1,
-            },
-            {"name": "modify", "description": "Modify a CraftForm Server", "type": 1},
-            {
-                "name": "save",
-                "description": "Save a CraftForm Server as a new template",
-                "type": 1,
-            },
-            {
-                "name": "get",
-                "description": "Get the attributes of a CraftForm Server",
-                "type": 1,
-            },
-        ],
-    },
-    # -------------------------------TEMPLATE COMMAND--------------------------------
-    {
-        "name": "template",
-        "description": "Manage your CraftForm Templates",
-        "options": [
-            {"name": "delete", "description": "Delete a CraftForm Template", "type": 1},
-            {
-                "name": "create",
-                "description": "Create a new CraftForm Template",
-                "type": 1,
-            },
-            {
-                "name": "list",
-                "description": "List all your CraftForm Templates",
-                "type": 1,
-            },
-            {"name": "modify", "description": "Modify a CraftForm Template", "type": 1},
-        ],
-    },
-    # -------------------------------REGION COMMAND--------------------------------
-    {
-        "name": "region",
-        "description": "Control the regions your CraftForm Servers are deployed in",
-        "options": [
-            {"name": "create", "description": "Create a new region", "type": 1},
-            {"name": "delete", "description": "Delete a region", "type": 1},
-            {"name": "list", "description": "List all regions", "type": 1},
-        ],
-    },
-    # -------------------------------UPDATE COMMAND--------------------------------
-    {
-        "name": "update",
-        "description": "Update your CraftForm to the latest release",
-        "type": 1,
-    },
-]
+slash_commands = json.loads((Path(__file__).parent / "slash_commands.json").read_text())
 
 
 # ==========================================================================================

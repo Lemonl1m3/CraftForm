@@ -25,21 +25,19 @@ import github_api
 def handler(event, context):
 
     # ===============================RE-REGISTER COMMANDS ON UPDATE===============================
-    # when someone runs /update, the staging function invokes this lambda directly to re-register
-    # the slash commands using the fresh code it just deployed. a direct invoke like this carries an
-    # "action" key and has NO "RequestType"/"ResponseURL" like cloudformation does - so we catch it
-    # here and bail out early before any of the cloudformation stuff below tries to run :)
+    # when someone runs /update, the staging function invokes this lambda to re-register commands
     if event.get("action") == "register_commands":
-        # --SET UP CLIENTS--
+        
+        # SET UP CLIENTS
         secretsManager = boto3.client("secretsmanager")  # need the bot token to talk to discord
         secrets = secretsManager.get_secret_value(SecretId="craftform-secrets")
         secrets_dict = json.loads(secrets["SecretString"])  # secret value is a JSON string
 
-        # --VARIABLES--
+        # VARIABLES
         discord_app_id = os.environ["DiscordAppId"]  # injected as an env var on this function already
         discord_bot_token = secrets_dict["Discord-Bot-Token"]  # grab the bot token out of it
 
-        # --RUN--
+        # RUN
         try:
             discord_api.register_slash_commands(discord_app_id, discord_bot_token)  # registers whatever is in slash_commands now
 

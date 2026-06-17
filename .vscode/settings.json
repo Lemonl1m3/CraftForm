@@ -1,3 +1,25 @@
 {
-    "azureTerraform.checkTerraformCmd": false
+    "azureTerraform.checkTerraformCmd": false,
+    "yaml.customTags": [
+        "!And sequence",
+        "!Base64 scalar",
+        "!Cidr sequence",
+        "!Condition scalar",
+        "!Equals sequence",
+        "!FindInMap sequence",
+        "!GetAtt scalar",
+        "!GetAZs scalar",
+        "!If sequence",
+        "!ImportValue scalar",
+        "!Join sequence",
+        "!Not sequence",
+        "!Or sequence",
+        "!Ref scalar",
+        "!Select sequence",
+        "!Split sequence",
+        "!Sub scalar",
+        "!Sub sequence",
+        "!Transform mapping",
+        "!Value scalar"
+    ]
 }
