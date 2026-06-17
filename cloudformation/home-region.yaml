@@ -190,6 +190,12 @@ Resources:
                 Action: secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform-secrets-*
 
+              # ---- /update fires the staging function off async to do the actual heavy lifting ----
+              - Sid: InvokeStaging
+                Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:aws:lambda:*:${AWS::AccountId}:function:craftform-staging-function
+
               # ---- logging, scoped to this project's own log groups ----
               - Sid: Logs
                 Effect: Allow
@@ -374,6 +380,16 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub "${CraftFormHomeBucket.Arn}/lambda-code/*" # only allow access to the specific S3 bucket and prefix used for staging Lambda code
+                # /update needs the github PAT to sync the user's fork
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub "arn:aws:secretsmanager:*:${AWS::AccountId}:secret:craftform-secrets-*"
+                # /update redeploys both functions and pokes startup to re-register the commands
+              - Effect: Allow
+                Action: [lambda:UpdateFunctionCode, lambda:GetFunction, lambda:InvokeFunction]
+                Resource:
+                  - !Sub "arn:aws:lambda:*:${AWS::AccountId}:function:craftform-startup-function"
+                  - !Sub "arn:aws:lambda:*:${AWS::AccountId}:function:craftform-operation-function"
               # allow creating log groups and streams.
               - Effect: Allow
                 Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
@@ -581,52 +597,104 @@ Resources:
       Timeout: 60
       MemorySize: 256 # give it a bit more memory for faster staging
       Role: !GetAtt StagerRole.Arn
+      # the /update path needs to know where to stash zips and whose fork to sync
+      Environment:
+        Variables:
+          Bucket: !Ref CraftFormHomeBucket
+          GithubUsername: !Ref GitHubUsername
       Code:
-        ZipFile: | 
-          import urllib.request, boto3
+        ZipFile: |
+          import urllib.request, json, os, boto3
           import cfnresponse
-          
-          # start a aws s3 client to stage the code in S3
+
+          # aws clients we lean on - s3 to stash the zips, lambda to redeploy + re-register, secrets for the github PAT
           s3 = boto3.client('s3')
+          lambdaClient = boto3.client('lambda')
+          secretsManager = boto3.client('secretsmanager')
+
+          # the two functions we redeploy and the release assets that back them
+          ASSETS = ['startup.zip', 'operations.zip']
+          BASE = "https://github.com/Liamade/CraftForm/releases"
+
+          # pull the release zips off github and stash them in S3
+          def stage_assets(bucket, version, assets=ASSETS):
+            # latest has a different url shape than a pinned version like v1.2.3
+            url = f"{BASE}/latest/download" if version == 'latest' else f"{BASE}/download/{version}"
+            for asset in assets:
+              download = urllib.request.urlopen(f"{url}/{asset}").read()  # grab the zip
+              s3.put_object(Bucket=bucket, Key=f"lambda-code/{asset}", Body=download)  # drop it in S3
+
+          # edit the user's "thinking..." message to let them know how the update went
+          def followup(app_id, token, message):
+            webhook = f"https://discord.com/api/v10/webhooks/{app_id}/{token}/messages/@original"
+            req = urllib.request.Request(
+              webhook,
+              data=json.dumps({"content": message}).encode(),
+              headers={"Content-Type": "application/json"},
+              method="PATCH",  # editing the existing deferred message, not posting a fresh one
+            )
+            urllib.request.urlopen(req)
 
           def handler(event, context):
+
+            # ===== /update came in (direct invoke from operations) =====
+            # no RequestType/cfnresponse on this path - operations punted here async, so we do the heavy
+            # lifting and report straight back to the user through the discord followup webhook :)
+            if event.get('action') == 'update':
+              app_id = event['application_id']  # so we can edit the user's "thinking..." message
+              token = event['interaction_token']  # the token for THIS interaction
+              try:
+                bucket = os.environ['Bucket']  # the home bucket, injected as an env var
+                github_user = os.environ['GithubUsername']  # whose fork we're syncing
+
+                # grab the github PAT so we can sync the fork
+                secrets = json.loads(secretsManager.get_secret_value(SecretId="craftform-secrets")['SecretString'])
+                github_pat = secrets['Github-PAT']
+
+                # ---- 1. sync the user's fork with my upstream repo ----
+                merge = urllib.request.Request(
+                  f"https://api.github.com/repos/{github_user}/CraftForm/merge-upstream",
+                  data=json.dumps({"branch": "main"}).encode(),
+                  headers={"Authorization": f"token {github_pat}", "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json"},
+                  method="POST",
+                )
+                urllib.request.urlopen(merge)  # 200 = synced, anything else raises and we report it below
+
+                # ---- 2. pull the latest release zips into S3 ----
+                stage_assets(bucket, event.get('version', 'latest'))
+
+                # ---- 3. point both live functions at the freshly staged code ----
+                lambdaClient.update_function_code(FunctionName='craftform-startup-function', S3Bucket=bucket, S3Key='lambda-code/startup.zip')
+                lambdaClient.update_function_code(FunctionName='craftform-operation-function', S3Bucket=bucket, S3Key='lambda-code/operations.zip')
+
+                # ---- 4. wait for startup to finish updating before we poke it (else it runs the OLD code) ----
+                lambdaClient.get_waiter('function_updated_v2').wait(FunctionName='craftform-startup-function')
+
+                # ---- 5. invoke the freshly-updated startup function to re-register the slash commands ----
+                register = lambdaClient.invoke(
+                  FunctionName='craftform-startup-function',
+                  InvocationType='RequestResponse',  # wait on it so we only tell the user "done" once it actually worked
+                  Payload=json.dumps({"action": "register_commands"}).encode(),
+                )
+                if register.get('FunctionError'):  # startup blew up while re-registering - surface the reason instead of lying
+                  raise Exception(register['Payload'].read().decode())
+
+                followup(app_id, token, "CraftForm is up to date! fork synced, lambdas redeployed, commands refreshed :)")
+              except Exception as e:
+                print(f"Error updating CraftForm: {e}")
+                followup(app_id, token, f"Update failed: {e}")
+              return  # nothing waits on this return - we already told the user via the webhook
+
+            # ===== cloudformation custom resource (stack create/update/delete) =====
             try:
               if event['RequestType'] != 'Delete':
-
-                # Stage the Lambda code in S3
+                # stage the lambda code in S3 from the release so the other functions can boot off it
                 envVar = event['ResourceProperties']
-
-                # set the url
-                base = "https://github.com/Liamade/CraftForm/releases"
-                version = envVar['Version']
-
-                # construct the 'full' URLs for the assets based on the version and base URL
-                if version == 'latest':
-                  url = f"{base}/latest/download"
-                else:
-                  url = f"{base}/download/{version}"
-
-                for asset in envVar['Assets']:
-
-                  # construct the full url for the asset
-                  fullUrl = f"{url}/{asset}"
-
-                  # download the file based on asset
-                  download = urllib.request.urlopen(fullUrl).read()
-
-                  # put in corresponding S3
-                  s3.put_object(
-                    Bucket = envVar['Bucket'],
-                    Key = f"lambda-code/{asset}",
-                    Body = download
-                  ) 
-              # send a success response back to CloudFormation
+                stage_assets(envVar['Bucket'], envVar['Version'], envVar['Assets'])
               cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-
             except Exception as e:
               print(f"Error staging Lambda code: {e}")
-              # send a failure response back to CloudFormation
-              cfnresponse.send(event, context, cfnresponse.FAILED, {}) 
+              cfnresponse.send(event, context, cfnresponse.FAILED, {})
           
 
   # Lambda function for startup tasks -  gets triggered when the stack is created

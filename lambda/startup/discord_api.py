@@ -84,17 +84,11 @@ slash_commands = [
             {"name": "list", "description": "List all regions", "type": 1},
         ],
     },
-    # -------------------------------HOME COMMAND--------------------------------
+    # -------------------------------UPDATE COMMAND--------------------------------
     {
-        "name": "home",
-        "description": "Modify your home region for CraftForm service",
-        "options": [
-            {
-                "name": "update",
-                "description": "Update your code to the most recent release",
-                "type": 1,
-            }
-        ],
+        "name": "update",
+        "description": "Update your CraftForm to the latest release",
+        "type": 1,
     },
 ]
 

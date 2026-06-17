@@ -84,7 +84,8 @@ def handler(event, context):
     # ====================================HANDLE SLASH COMMANDS===================================
     if body["type"] == 2:
         command = body["data"]["name"]  # capture the slash command
-        subcommand = body["data"]["options"][0]["name"]  # capture the slash command's subcommand - words are fun
+        options = body["data"].get("options", [])  # top-level commands like /update have no subcommands, so this can be empty
+        subcommand = options[0]["name"] if options else None  # only grab a subcommand if there actually is one
 
         # --------------------------------SERVER COMMANDS--------------------------------
         if command == "server":
@@ -101,3 +102,33 @@ def handler(event, context):
                         }
                     ),
                 }
+
+        # --------------------------------UPDATE COMMAND--------------------------------
+        # the actual update (sync the fork, pull the latest release, redeploy the lambdas, re-register
+        # commands) takes WAY longer than discord's 3 second deadline - so we can't do it here. instead we
+        # punt the heavy lifting to the staging function async and just tell discord we're "thinking" :)
+        if command == "update":
+            lambdaClient = boto3.client("lambda")  # need the lambda client to kick off the staging function
+
+            lambdaClient.invoke(
+                FunctionName="craftform-staging-function",  # the inline staging function does the actual work
+                InvocationType="Event",  # fire-and-forget - this returns straight away, we don't wait on it
+                Payload=json.dumps(
+                    {
+                        "action": "update",  # tells staging to take the direct-invoke path, not the cloudformation one
+                        "application_id": body["application_id"],  # staging needs this to hit the followup webhook later
+                        "interaction_token": body["token"],  # the token discord gave us for THIS interaction
+                        "version": "latest",  # which release to pull - latest for now
+                    }
+                ).encode(),
+            )
+
+            return {
+                "statusCode": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps(
+                    {
+                        "type": 5,  # deferred response - shows the user "thinking..." while staging does its thing and edits the message when it's done
+                    }
+                ),
+            }

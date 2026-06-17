@@ -24,6 +24,37 @@ import github_api
 
 def handler(event, context):
 
+    # ===============================RE-REGISTER COMMANDS ON UPDATE===============================
+    # when someone runs /update, the staging function invokes this lambda directly to re-register
+    # the slash commands using the fresh code it just deployed. a direct invoke like this carries an
+    # "action" key and has NO "RequestType"/"ResponseURL" like cloudformation does - so we catch it
+    # here and bail out early before any of the cloudformation stuff below tries to run :)
+    if event.get("action") == "register_commands":
+        # --SET UP CLIENTS--
+        secretsManager = boto3.client("secretsmanager")  # need the bot token to talk to discord
+        secrets = secretsManager.get_secret_value(SecretId="craftform-secrets")
+        secrets_dict = json.loads(secrets["SecretString"])  # secret value is a JSON string
+
+        # --VARIABLES--
+        discord_app_id = os.environ["DiscordAppId"]  # injected as an env var on this function already
+        discord_bot_token = secrets_dict["Discord-Bot-Token"]  # grab the bot token out of it
+
+        # --RUN--
+        try:
+            discord_api.register_slash_commands(discord_app_id, discord_bot_token)  # registers whatever is in slash_commands now
+
+        # ON FAILURE - this path ISN'T cloudformation, so there's no ResponseURL or StackId to hand back.
+        except Exception as e:
+            print(f"Failed to re-register commands: {e}")
+            raise
+
+        # ON SUCCESS
+        return {"status": "commands registered :)"}  # staging only tells the user "done" once this comes back clean
+
+
+
+    # ========================================STARTUP PATH========================================
+
     http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests | have to initalize outside the try statement so it can send Cloudformation responses in case of errors
 
     try:  # wrapping entire function in a try catch block because it makes it catches errors and also ensures when deleting cloudformation state, it deletes early

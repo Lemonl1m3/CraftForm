@@ -34,15 +34,19 @@ build/
 *.tfstate
 *.tfstate.backup
 
-# tfvars can contain secrets (API keys, passwords, etc.)
+# tfvars can contain secrets
 *.tfvars
 *.tfvars.json
 
-# Local override files are for personal dev tweaks, not shared
+# Local override files are for personal dev tweaks
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Saved plan output can embed sensitive values 
+*.tfplan
+tfplan
 
 # Terraform crash logs
 crash.log
@@ -57,6 +61,7 @@ terraform.rc
 # ==============================================================================
 *.zip
 package/
+lambda-build/   # the release workflow pip-installs deps into here before zipping
 
 # ==============================================================================
 # Secrets & credentials
@@ -67,6 +72,17 @@ package/
 *.key
 secrets.yaml
 secrets.json
+
+# ==============================================================================
+# Editors / IDEs
+# ==============================================================================
+# ignore personal vscode junk but keep the shared settings
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
 
 # ==============================================================================
 # OS
