@@ -22,6 +22,10 @@ on:
       version:
         description: 'Version number for the release (e.g., v1.2.3)'
         required: true
+      prerelease:
+        description: 'Set to TRUE if it is a prerelease'
+        type: boolean
+        default: false
 
   # AUTOMATIC TRIGGER: trigger on new version tags being pushed in the repo      
   push:
