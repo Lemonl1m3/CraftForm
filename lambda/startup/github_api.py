@@ -167,10 +167,7 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     )
 
     # make sure the request to push the secret was successful
-    if gitResponse.status not in [
-        201,
-        204,
-    ]:  # GitHub API returns a 201 Created status code for a new secret and a 204 No Content status code for an updated secret
+    if gitResponse.status not in [201, 204,]:  # GitHub API returns a 201 for a new secret and 204 for an updated secret
         raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("Secret placed :)")
@@ -188,7 +185,6 @@ def push_varTo_github(github_pat, github_username, var, varName):
 
     # ALREADY EXISTS RESPONSE
     if varResponse.status == 409:
-        
         print("Variable already exists, patching the variable instead")
 
         # do a patch request since 409 means the variable already exists
@@ -202,11 +198,11 @@ def push_varTo_github(github_pat, github_username, var, varName):
         # FAILURE REPONSE - PATCH
         if patchResponse.status != 204:
             raise Exception(f"Failed to update {varName}: {patchResponse.status} - {patchResponse.data} :(")
-        
+
         # SUCCESS REPONSE
         else:
             print(f"Successfully updated {varName} :)")
-    
+
     # SUCCESS REPONSE
     elif varResponse.status == 201:
         print(f"Succesfully placed {varName} :)")
