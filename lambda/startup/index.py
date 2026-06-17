@@ -34,6 +34,7 @@ def handler(event, context):
             gitRole_arn = os.environ["GithubActionsRoleArn"]
             github_username = os.environ["GithubUsername"]
             discord_app_id = os.environ["DiscordAppId"]
+            aws_region = os.environ["Region"]
 
             # ==================================INITIALIZATION=================================
 
@@ -51,9 +52,14 @@ def handler(event, context):
 
             github_api.enable_github_actions(github_pat, github_username)  # enable GitHub Actions in the forked repo
 
+            # -- push variables to github
+            github_api.push_varTo_github(
+                github_pat, github_username, aws_region, "HOME_REGION"
+            )   # home region variable
+
             github_api.push_secretsTo_github(
                 github_pat, github_username, gitRole_arn
-            )  # push the AWS API Gateway URL and GitHub Actions Role ARN as encrypted secrets to the forked GitHub repo
+            )  # push thevb GitHub Actions Role ARN as encrypted secrets to the forked GitHub repo
 
             # store the GitHub forked repo URL into SSM parameter store
             ssm.put_parameter(

@@ -174,3 +174,52 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
         raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("Secret placed :)")
+
+
+
+def push_varTo_github(github_pat, github_username, var, varName):
+
+    # do a POST request to put a new variable in the repo
+    varResponse = http.request(
+        "POST",
+        f"https://api.github.com/repos/{github_username}/CraftForm/actions/variables",
+        headers = {
+            "Authorization": f"token {github_pat}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json"
+        },
+        body = json.dumps({
+            "name": varName,
+            "value": var
+        })
+    )
+
+    # get the response code
+    if varResponse.status == 409:
+        print("Variable already exists, patching the variable instead")
+
+        # do a patch request since 409 means the variable already exists
+        patchResponse = http.request(
+            "PATCH",
+            f"https://api.github.com/repos/{github_username}/CraftForm/actions/variables/{varName}",
+            headers = {
+                "Authorization": f"token {github_pat}",
+                "Accept": "application/vnd.github.v3+json",
+                "Content-Type": "application/json"
+            },
+            body = json.dumps({
+                "value": var
+            })
+        )
+
+        if patchResponse.status != 204:
+            raise Exception(f"Failed to update {varName}: {patchResponse.status} - {patchResponse.data} :(")
+        else:
+            print(f"Successfully updated {varName} :)")
+            
+
+    elif varResponse.status == 201:
+        print(f"Succesfully placed {varName} :)")
+    else:
+        raise Exception(f"Failed to update {varName}: {varResponse.status} - {varResponse.data} :(")
+

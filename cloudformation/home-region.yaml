@@ -650,6 +650,7 @@ Resources:
           ApiGatewayUrl: !Sub https://${DiscordApiGateway}.execute-api.${AWS::Region}.amazonaws.com/discord
           GithubActionsRoleArn: !GetAtt GithubActionsRole.Arn
           DiscordAppId: !Ref DiscordAppId
+          Region: !Ref AWS::Region
 
       Timeout: 120 # set a longer timeout for the startup function
       Runtime: python3.12 # runtime for the Lambda function
