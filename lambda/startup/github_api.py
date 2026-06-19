@@ -122,7 +122,7 @@ def enable_github_actions(github_pat, github_username):
         print("GitHub Actions enabled :)")
 
 
-def push_secretsTo_github(github_pat, github_username, role_arn):
+def push_secretsTo_github(github_pat, github_username, secretDictionary):
 
     # get the public key from GitHub to encrypt the secret before pushing it to GitHub
     # this is required by GitHub - all secrets have to be encrypted with GitHub's public key
@@ -148,32 +148,35 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     keyData = json.loads(keyResponse.data.decode("utf-8"))
     public_key = keyData["key"]  # the public key to encrypt secrets with
     key_id = keyData["key_id"]  # the key ID to include in the request to GitHub when pushing secrets
+    
+    # repeat for every entry in the dictionary
+    for secretName, secret in secretDictionary.items():
 
-    # encrypt the GitHub secret  with the public key
-    # GitHub requires that all secrets pushed to GitHub are encrypted with the Public Key captured
-    encrypted_secret = encrypt_secret(public_key, role_arn)
+        # encrypt the GitHub secret  with the public key
+        # GitHub requires that all secrets pushed to GitHub are encrypted with the Public Key captured
+        encrypted_secret = encrypt_secret(public_key, secret)
 
-    # push the encrypted secret to GitHub using the API - this will make the secret available in the forked repo
-    # GitHub Actions will be able to access this secret and use it within it's workflows and pipelines
-    gitResponse = http.request(
-        "PUT",
-        f"https://api.github.com/repos/{github_username}/CraftForm/actions/secrets/AWS_ROLE_ARN",  # name of the secret in GitHub - AWS_ROLE_ARN
-        headers={
-            "Authorization": f"token {github_pat}",
-            "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json",
-        },
-        body=json.dumps({"encrypted_value": encrypted_secret, "key_id": key_id}),
-    )
+        # push the encrypted secret to GitHub using the API - this will make the secret available in the forked repo
+        # GitHub Actions will be able to access this secret and use it within it's workflows and pipelines
+        gitResponse = http.request(
+            "PUT",
+            f"https://api.github.com/repos/{github_username}/CraftForm/actions/secrets/{secretName}",  # secret name comes from the dict key
+            headers={
+                "Authorization": f"token {github_pat}",
+                "Accept": "application/vnd.github.v3+json",
+                "Content-Type": "application/json",
+            },
+            body=json.dumps({"encrypted_value": encrypted_secret, "key_id": key_id}),
+        )
 
-    # make sure the request to push the secret was successful
-    if gitResponse.status not in [
-        201,
-        204,
-    ]:  # GitHub API returns a 201 for a new secret and 204 for an updated secret
-        raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
-    else:
-        print("Secret placed :)")
+        # make sure the request to push the secret was successful
+        if gitResponse.status not in [
+            201,
+            204,
+        ]:  # GitHub API returns a 201 for a new secret and 204 for an updated secret
+            raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
+        else:
+            print(f"Secret {secretName} placed :)")
 
 
 def push_varTo_github(github_pat, github_username, varDictionary):

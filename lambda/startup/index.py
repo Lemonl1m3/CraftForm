@@ -59,7 +59,6 @@ def handler(event, context):
             # ===============================INJECTED VARIABLES===============================
 
             awsApi_url = os.environ["ApiGatewayUrl"]
-            gitRole_arn = os.environ["GithubActionsRoleArn"]
             github_username = os.environ["GithubUsername"]
             discord_app_id = os.environ["DiscordAppId"]
 
@@ -68,7 +67,9 @@ def handler(event, context):
                 "HOME_REGION": os.environ["Region"],
                 "STATE_BUCKET": os.environ["HomeBucket"],
             }
-
+            github_secret_Dictionary = {
+                "AWS_ROLE_ARN": os.environ["GithubActionsRoleArn"]
+            }
             # ==================================INITIALIZATION=================================
 
             ssm = boto3.client("ssm")  # create a AWS System Manager client to interact with SSM Parameter Store
@@ -76,6 +77,7 @@ def handler(event, context):
             secrets = secretsManager.get_secret_value(
                 SecretId="craftform-secrets"
             )  # get the secret value for the secret named "craftform-secrets" from Secrets Manager
+            
             secrets_dict = json.loads(secrets["SecretString"])  # the secret value is a JSON string
 
             # ================================GITHUB INTEGRATION===============================
@@ -90,7 +92,7 @@ def handler(event, context):
 
             # push the encrypted secrets to the forked GitHub repo
             github_api.push_secretsTo_github(
-                github_pat, github_username, gitRole_arn
+                github_pat, github_username, github_secret_Dictionary
             )  
 
             # store the GitHub forked repo URL into SSM parameter store
