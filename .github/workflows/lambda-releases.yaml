@@ -4,7 +4,8 @@
 #╠══════════════════════════════════════════════════════════════════════════════╣
 #║  GITHUB ACTIONS  ::  release.yaml                                            ║
 #║  Builds the operations + startup lambda zips and publishes them              ║
-#║  as GitHub release assets for the bootstrap stager to pull.                  ║
+#║  as GitHub release assets for the bootstrap stager to pull. The workflow is  ║
+#║  not heavy enough to qualify for a matrix approach                           ║
 #╚══════════════════════════════════════════════════════════════════════════════╝
 
 
@@ -64,17 +65,23 @@ jobs:
       # BUILD LAMBDA CODE: install dependencies and build the lambda code into a zip file for distribution
       - name: Build Lambda Code
         run: |
-          # --build the lambda code for both the startup and operations function
+          # BUILD OUT THE LAMBDA CODE
           for function in startup operations; do
             
 
-            # --install dependencies from the requirements file into a build directory for the function
+            # DEPENDENCIES -- install required dependencies from the requirements.txt
             pip install -r lambda/$function/requirements.txt -t lambda-build/$function 
             
-            # --copy the lambda function code into the build directory
-            cp lambda/$function/*.py lambda-build/$function/
+            # COPY DIRECTORY -- copy everthing except certain files 
+            rsync -a \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='.mypy_cache' \
+              --exclude='requirements*.txt' \
+              --exclude='requirements-dev.txt' \
+              lambda/$function/ lambda-build/$function/
 
-            # --zip up the contents of the build directory for the function
+            # ZIP FILES -- zip files to make an actual release
             (
               cd lambda-build/$function
               zip -r ../../$function.zip .
