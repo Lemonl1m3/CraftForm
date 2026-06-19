@@ -7,7 +7,6 @@
 terraform {
   required_version = ">= 1.11.0" # has to be greater than or equal to 1.11.0 to do state locking on S3
 
-
   #========================PROVIDER CONFIGURATION========================
   required_providers {
     aws = {
