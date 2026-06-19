@@ -65,7 +65,7 @@ def handler(event, context):
             "statusCode": 401,
             "body": json.dumps({"error": "Invalid request signature"}),
         }
-    
+
     print("Signature verification SUCCESS :)")
 
     body = json.loads(rawBody)  # safe to parse now that the signature is verified
@@ -88,7 +88,6 @@ def handler(event, context):
 
         if command == "server":
             return server.handle(subcommand, options, body)
-
 
         if command == "template":
             return template.handle(subcommand, options, body)

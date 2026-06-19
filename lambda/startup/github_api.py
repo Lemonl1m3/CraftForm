@@ -167,7 +167,10 @@ def push_secretsTo_github(github_pat, github_username, role_arn):
     )
 
     # make sure the request to push the secret was successful
-    if gitResponse.status not in [201, 204,]:  # GitHub API returns a 201 for a new secret and 204 for an updated secret
+    if gitResponse.status not in [
+        201,
+        204,
+    ]:  # GitHub API returns a 201 for a new secret and 204 for an updated secret
         raise Exception(f"Failed to push secret: {gitResponse.status} - {gitResponse.data} :(")
     else:
         print("Secret placed :)")

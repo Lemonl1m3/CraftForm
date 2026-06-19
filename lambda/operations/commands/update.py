@@ -3,7 +3,7 @@
 # ╠══════════════════════════════════════════════════════════════════════════════╣
 # ║  OPERATIONS LAMBDA  ::  commands/update.py                                   ║
 # ║  Handles the /update slash command.                                          ║
-# ║  Kicks off the staging function to sync, redeploy, and refresh commands.    ║
+# ║  Kicks off the staging function to sync, redeploy, and refresh commands.     ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 import json
@@ -15,22 +15,24 @@ import boto3
 # ==========================================================================================
 def handle(subcommand, options, body):
 
-    # the actual update takes WAY longer than discord's 3 second deadline - so we can't do
-    # it here. instead we kick off the staging function async and tell discord we're "thinking" :)
+    # =============================AWS CLIENT=============================
     lambdaClient = boto3.client("lambda")
 
+    # ======================INVOKE STAGING FUNCTION=======================
     lambdaClient.invoke(
         FunctionName="craftform-staging-function",  # staging function does all the actual heavy lifting
         InvocationType="Event",  # fire-and-forget - returns immediately, we don't wait on it
-        Payload=json.dumps({
-            "action": "update",  # tells staging to take the /update path, not the cloudformation one
-            "application_id": body["application_id"],  # staging needs this because it isn't used in the stage code lambda before this
-            "interaction_token": body["token"],  # the token for THIS interaction - staging uses it for the followup webhook
-        }).encode(),
+        Payload=json.dumps(
+            {
+                "action": "update",  # tells staging to take the /update path, not the cloudformation one
+                "application_id": body["application_id"],  # staging needs this because it isn't used in the stage code lambda before this
+                "interaction_token": body["token"],  # the token for THIS interaction - lets us tell discord which channel or guild the message is going to
+            }
+        ).encode(),
     )
 
-
-    # tell discord we're thinking - staging will edit this message when it's done :)
+    # ===========================DISCORD RESPONSE===========================
+    # tell discord we're thinking - staging lambda will edit this message when it's done :)
     return {
         "statusCode": 200,
         "headers": {"Content-Type": "application/json"},

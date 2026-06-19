@@ -19,12 +19,14 @@ def handle(subcommand, options, body):
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({
-                "type": 4,  # respond immediately to the user
-                "data": {
-                    "content": "Your mum a hoe, a pretty one tho <3"  # placeholder :)
-                },
-            }),
+            "body": json.dumps(
+                {
+                    "type": 4,  # respond immediately to the user
+                    "data": {
+                        "content": "Your mum a hoe, a pretty one tho <3"  # placeholder :)
+                    },
+                }
+            ),
         }
 
     # --------------------------------STOP--------------------------------
