@@ -20,6 +20,7 @@ on:
     branches: [main]
   # trigger on pull requests
   pull_request:
+    branches: [main]
 
 # one run per branch: stop overlapping runs and cancel the older run if needed
 concurrency:
