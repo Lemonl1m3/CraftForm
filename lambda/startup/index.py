@@ -54,6 +54,7 @@ def handler(event, context):
     http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests | have to initalize outside the try statement so it can send Cloudformation responses in case of errors
 
     try:  # wrapping entire function in a try catch block because it makes it catches errors and also ensures when deleting cloudformation state, it deletes early
+        
         if event["RequestType"] != "Delete":  # make sure the startup script doesn't run on deletion
             # ===============================INJECTED VARIABLES===============================
 

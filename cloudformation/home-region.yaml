@@ -609,9 +609,7 @@ Resources:
           import cfnresponse
 
           # ================AWS CLIENT================
-          s3 = boto3.client('s3')
-          lambdaClient = boto3.client('lambda')
-          secretsManager = boto3.client('secretsmanager')
+          s3 = boto3.client('s3')  # used by stage_assets, which BOTH the /update and cloudformation paths call - so it stays global
 
           # the two functions we redeploy and the release assets that back them
           assets = ['startup.zip', 'operations.zip']
@@ -628,6 +626,7 @@ Resources:
               s3.put_object(Bucket=bucket, Key=f"lambda-code/{asset}", Body=download)
 
           # ================FOLLOWUP FUNCTION================
+          # sends a message to discord to tell it that the process is done -- for /update function
           def followup(app_id, token, message):
             webhook = f"https://discord.com/api/v10/webhooks/{app_id}/{token}/messages/@original"
 
@@ -640,60 +639,69 @@ Resources:
 
             urllib.request.urlopen(req)
 
+          # ================UPDATE FUNCTION================
+          # the /update flow: sync the fork, redeploy the lambdas, refresh commands, then tell discord we're done
+          def handle_update(event):
+            # -------------------------------AWS CLIENTS------------------------------
+            lambdaClient = boto3.client('lambda')
+            secretsManager = boto3.client('secretsmanager')
+            # ---------------------------INJECTED VARIABLES---------------------------
+            app_id = event['application_id']  # so we can edit the user's "thinking..." message
+            token = event['interaction_token']  # the token for THIS interaction
+
+            # -----------------------------MAIN EXECUTION-----------------------------
+            try:
+              # VARIABLES -- stay as os variables after the first run so we can call them again
+              bucket = os.environ['Bucket']  # the home craftform bucket
+              github_user = os.environ['GithubUsername']  # whose fork we're syncing
+
+              # grab the github PAT so we can sync the fork
+              secrets = json.loads(secretsManager.get_secret_value(SecretId="craftform-secrets")['SecretString'])
+              github_pat = secrets['Github-PAT']
+
+              # -------------------------------SYNC REPO-------------------------------
+              merge = urllib.request.Request(
+                f"https://api.github.com/repos/{github_user}/CraftForm/merge-upstream",
+                data=json.dumps({"branch": "main"}).encode(),
+                headers={"Authorization": f"token {github_pat}", "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json"},
+                method="POST",
+              )
+              urllib.request.urlopen(merge)  # 200 = synced, anything else raises and we report it below
+
+              # ---------------------------LATEST LAMBDA CODE---------------------------
+              stage_assets(bucket, 'latest') # calls the original stage_assets function with just the latest
+
+              # UPDATE THE LAMBDA -- update the current lambdas with the new code that got pulled
+              lambdaClient.update_function_code(FunctionName='craftform-startup-function', S3Bucket=bucket, S3Key='lambda-code/startup.zip')
+              lambdaClient.update_function_code(FunctionName='craftform-operation-function', S3Bucket=bucket, S3Key='lambda-code/operations.zip')
+
+              # wait for startup to finish waiting -- is used because it is called later
+              lambdaClient.get_waiter('function_updated_v2').wait(FunctionName='craftform-startup-function')
+
+              # ---------------------------STARTUP FUNCTION---------------------------
+              # we re-run the startup function because it has to reregister potentially new discord commands
+              register = lambdaClient.invoke(
+                FunctionName='craftform-startup-function',
+                InvocationType='RequestResponse',  # wait on it so we only tell the user "done" once it actually worked
+                Payload=json.dumps({"action": "register_commands"}).encode(),
+              )
+
+              if register.get('FunctionError'):  # check and see if the wrapper has FunctionError in the response
+                raise Exception(register['Payload'].read().decode())
+
+              followup(app_id, token, "CraftForm is updated, goodjob!! <3")
+
+            except Exception as e:
+              print(f"Error updating CraftForm :( : {e}")
+              followup(app_id, token, f"Update failed :( : {e}")
+
           # ================MAIN HANDLER===================
           def handler(event, context):
 
-
-
             # ============UPDATE EVENT============
-            # this is if the user does /update and the stagercode needs to redo the other lambda code
+            # /update fires this lambda async - hand it off to the update function and bail
             if event.get('action') == 'update':
-
-              app_id = event['application_id']  # so we can edit the user's "thinking..." message
-              token = event['interaction_token']  # the token for THIS interaction
-              try:
-                # VARIABLES
-                bucket = os.environ['Bucket']  # the home bucket, injected as an env var
-                github_user = os.environ['GithubUsername']  # whose fork we're syncing
-
-                # grab the github PAT so we can sync the fork
-                secrets = json.loads(secretsManager.get_secret_value(SecretId="craftform-secrets")['SecretString'])
-                github_pat = secrets['Github-PAT']
-
-
-                # ---- 1. sync the user's fork with my upstream repo ----
-                merge = urllib.request.Request(
-                  f"https://api.github.com/repos/{github_user}/CraftForm/merge-upstream",
-                  data=json.dumps({"branch": "main"}).encode(),
-                  headers={"Authorization": f"token {github_pat}", "Accept": "application/vnd.github.v3+json", "Content-Type": "application/json"},
-                  method="POST",
-                )
-                urllib.request.urlopen(merge)  # 200 = synced, anything else raises and we report it below
-
-                # ---- 2. pull the latest release zips into S3 ----
-                stage_assets(bucket, 'latest')
-
-                # ---- 3. point both live functions at the freshly staged code ----
-                lambdaClient.update_function_code(FunctionName='craftform-startup-function', S3Bucket=bucket, S3Key='lambda-code/startup.zip')
-                lambdaClient.update_function_code(FunctionName='craftform-operation-function', S3Bucket=bucket, S3Key='lambda-code/operations.zip')
-
-                # ---- 4. wait for startup to finish updating before we poke it (else it runs the OLD code) ----
-                lambdaClient.get_waiter('function_updated_v2').wait(FunctionName='craftform-startup-function')
-
-                # ---- 5. invoke the freshly-updated startup function to re-register the slash commands ----
-                register = lambdaClient.invoke(
-                  FunctionName='craftform-startup-function',
-                  InvocationType='RequestResponse',  # wait on it so we only tell the user "done" once it actually worked
-                  Payload=json.dumps({"action": "register_commands"}).encode(),
-                )
-                if register.get('FunctionError'):  # startup blew up while re-registering - surface the reason instead of lying
-                  raise Exception(register['Payload'].read().decode())
-
-                followup(app_id, token, "CraftForm is up to date! fork synced, lambdas redeployed, commands refreshed :)")
-
-              except Exception as e:
-                print(f"Error updating CraftForm: {e}")
-                followup(app_id, token, f"Update failed: {e}")
+              handle_update(event)
               return  # nothing waits on this return - we already told the user via the webhook
 
             # ===== cloudformation custom resource (stack create/update/delete) =====
@@ -704,15 +712,17 @@ Resources:
                 # stage the lambda code in S3 from the release so the other functions can boot off it
                 envVar = event['ResourceProperties']
                 stage_assets(envVar['Bucket'], envVar['Version'])
-                
+
               cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
 
 
             except Exception as e:
-              print(f"Error staging Lambda code: {e}")
+              print(f"Error staging Lambda code: {e} :(")
               cfnresponse.send(event, context, cfnresponse.FAILED, {})
+              print(f"Error staging Lambda code: {e} :(")
+              cfnresponse.send(event, context, cfnresponse.FAILED, {})
+              
           
-
   # Lambda function for startup tasks -  gets triggered when the stack is created
   StartUpFunction:
     Type: AWS::Lambda::Function
