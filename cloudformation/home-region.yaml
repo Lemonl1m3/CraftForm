@@ -375,10 +375,12 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-                # allow putting objects into the specific S3 bucket
+                # allow staging objects into the specific S3 bucket -- GetObject is needed because
+                # update_function_code pulls the staged zip from S3 using the stager's own creds
               - Effect: Allow
                 Action:
                   - s3:PutObject
+                  - s3:GetObject
                 Resource: !Sub "${CraftFormHomeBucket.Arn}/lambda-code/*" # only allow access to the specific S3 bucket and prefix used for staging Lambda code
                 # /update needs the github PAT to sync the user's fork
               - Effect: Allow
@@ -633,7 +635,8 @@ Resources:
             req = urllib.request.Request(
               webhook,
               data=json.dumps({"content": message}).encode(),
-              headers={"Content-Type": "application/json"},
+              # discord sits behind cloudflare which 403s the default Python-urllib UA -- any real UA works, contents don't matter
+              headers={"Content-Type": "application/json", "User-Agent": "CraftForm-Bot/1.0"},
               method="PATCH",  # editing the existing deferred message, not posting a fresh one
             )
 

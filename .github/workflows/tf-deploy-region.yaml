@@ -21,6 +21,10 @@ on:
         options: [destroy, apply]
         default: apply
 
+# PERMISSIONS 
+permissions:
+  id-token: write   # needed to get a JWT from github to prove who the runner is -- basically a passport
+  contents: read
 
 #============================================================
 #                 JOB EXECUTION
@@ -39,3 +43,17 @@ jobs:
       with:
         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
         aws-region: ${{ vars.HOME_REGION }}
+
+    # ==========================CHECKOUT REPO=========================
+    - name: Checkout Terraform Repo
+      uses: actions/checkout@v7
+
+    # =========================TERRAFORM INIT=========================
+
+
+    # =========================TERRAFORM PLAN=========================
+
+
+    # =========================TERRAFORM APPLY========================
+
+    # ========================TERRAFORM DESTROY=======================

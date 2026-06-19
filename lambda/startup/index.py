@@ -53,7 +53,9 @@ def handler(event, context):
     http = urllib3.PoolManager()  # create a new HTTP connection pool manager to make HTTP requests | have to initalize outside the try statement so it can send Cloudformation responses in case of errors
 
     try:  # wrapping entire function in a try catch block because it makes it catches errors and also ensures when deleting cloudformation state, it deletes early
-        if event["RequestType"] != "Delete":  # make sure the startup script doesn't run on deletion
+
+        # RUN -- make sure the startup script doesn't run on deletion
+        if event["RequestType"] != "Delete": 
             # ===============================INJECTED VARIABLES===============================
 
             awsApi_url = os.environ["ApiGatewayUrl"]
@@ -102,6 +104,8 @@ def handler(event, context):
             )  # set the API Gateway URL as the interactions endpoint in the Discord
 
             discord_api.register_slash_commands(discord_app_id, discord_bot_token)  # register the slash commands with the Discord API
+
+
 
         # =================================SUCCESS RESPONSE=============================
         response = {
