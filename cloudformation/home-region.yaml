@@ -748,6 +748,7 @@ Resources:
           GithubActionsRoleArn: !GetAtt GithubActionsRole.Arn
           DiscordAppId: !Ref DiscordAppId
           Region: !Ref AWS::Region
+          HomeBucket: !Ref CraftFormHomeBucket
 
       Timeout: 120 # set a longer timeout for the startup function
       Runtime: python3.12 # runtime for the Lambda function
