@@ -382,6 +382,17 @@ Resources:
                   - s3:PutObject
                   - s3:GetObject
                 Resource: !Sub "${CraftFormHomeBucket.Arn}/lambda-code/*" # only allow access to the specific S3 bucket and prefix used for staging Lambda code
+                # ---- on stack delete we empty the WHOLE bucket so cloudformation can actually drop it ----
+                # versioning is on, so we need the version-aware list + delete actions too
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                Resource:
+                  - !GetAtt CraftFormHomeBucket.Arn
+                  - !Sub "${CraftFormHomeBucket.Arn}/*"
                 # /update needs the github PAT to sync the user's fork
               - Effect: Allow
                 Action: secretsmanager:GetSecretValue
@@ -627,6 +638,17 @@ Resources:
               download = urllib.request.urlopen(f"{url}/{asset}").read()  # grab the zip
               s3.put_object(Bucket=bucket, Key=f"lambda-code/{asset}", Body=download)
 
+          # ================BUCKET EMPTYING FUNCTION================
+          # cloudformation refuses to delete a non-empty bucket, so on stack delete we wipe it ourselves.
+          # versioning is on, so we have to clear every version AND every delete marker
+          def empty_bucket(bucket):
+            pages = s3.get_paginator('list_object_versions').paginate(Bucket=bucket)
+            for page in pages:
+              # both versions and delete markers count as "stuff in the bucket" we need gone
+              objects = [{'Key': o['Key'], 'VersionId': o['VersionId']} for o in page.get('Versions', []) + page.get('DeleteMarkers', [])]
+              if objects:
+                s3.delete_objects(Bucket=bucket, Delete={'Objects': objects})
+
           # ================FOLLOWUP FUNCTION================
           # sends a message to discord to tell it that the process is done -- for /update function
           def followup(app_id, token, message):
@@ -715,6 +737,11 @@ Resources:
                 # stage the lambda code in S3 from the release so the other functions can boot off it
                 envVar = event['ResourceProperties']
                 stage_assets(envVar['Bucket'], envVar['Version'])
+
+              else:
+                # stack teardown - this resource dies before the bucket does, so empty it now
+                # while it still exists, otherwise cloudformation chokes on the non-empty bucket
+                empty_bucket(event['ResourceProperties']['Bucket'])
 
               cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
 
