@@ -130,6 +130,16 @@ Resources:
                   StringEquals:
                     aws:ResourceTag/Project: craftform # only allow modification and deletion of resources tagged with Project=craftForm
 
+              # terraform state lives as OBJECTS in the home bucket, and objects don't
+              # inherit the bucket's craftform tag -- so the tag rule above can't reach them.
+              # grant object access directly. (ListBucket still rides the tag rule, since the bucket IS tagged)
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub arn:aws:s3:::craftform-home-${AWS::AccountId}/regions/*
+
               # allow full access to specific SSM parameter path for CraftForm
               - Effect: Allow
                 Action:
