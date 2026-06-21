@@ -48,6 +48,12 @@ jobs:
     - name: Checkout Terraform Repo
       uses: actions/checkout@v7
 
+    # ========================SETUP TERRAFORM=========================
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_wrapper: false  # don't really need the wrapper for what this pipeline is being used for
+
     # =========================TERRAFORM INIT=========================
     - name: Terraform Init
       working-directory: terraform  # the directory to use
