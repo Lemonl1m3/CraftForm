@@ -110,15 +110,53 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # allow creation
+              # ════════════ creates + tag-on-create ════════════
+              # brand-new resources have NO tags yet
               - Effect: Allow
                 Action:
+                  # --- s3 world-data bucket + all its settings ---
                   - s3:CreateBucket
+                  - s3:PutBucketTagging
+                  - s3:PutBucketVersioning
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketOwnershipControls
+                  - s3:PutEncryptionConfiguration
+                  # --- vpc, subnets, igw, routes, endpoint, security groups ---
+                  - ec2:CreateVpc
+                  - ec2:ModifyVpcAttribute
+                  - ec2:CreateSubnet
+                  - ec2:CreateInternetGateway
+                  - ec2:AttachInternetGateway
+                  - ec2:CreateRouteTable
+                  - ec2:CreateRoute
+                  - ec2:AssociateRouteTable
+                  - ec2:CreateVpcEndpoint
+                  - ec2:CreateSecurityGroup
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:AuthorizeSecurityGroupEgress
+                  - ec2:CreateTags
+                  # --- the ec2 server role + its instance profile ---
                   - iam:CreateRole
+                  - iam:TagRole
+                  - iam:PutRolePolicy
                   - iam:CreatePolicy
                   - iam:CreateInstanceProfile
+                  - iam:AddRoleToInstanceProfile
                   - iam:AttachRolePolicy
                   - iam:PassRole
+                Resource: '*'
+
+              # ════════════ read-backs ════════════
+              # after a create terraform reads the resource back to populate state. s3/iam
+              # Get* aren't covered by ec2:Describe*, and a freshly-made bucket isn't tagged
+              # yet -- so the tag-scoped statement can't reach these. read-only, so safe to
+              # just allow them outright :)
+              - Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:ListBucket
+                  - iam:Get*
+                  - iam:List*
                 Resource: '*'
 
               # allow modification and desctruction of anything with specific craftForm tag
@@ -130,10 +168,7 @@ Resources:
                   StringEquals:
                     aws:ResourceTag/Project: craftform # only allow modification and deletion of resources tagged with Project=craftForm
 
-              # terraform state lives as OBJECTS in the home bucket, and objects don't
-              # inherit the bucket's craftform tag -- so the tag rule above can't reach them.
-              # ListBucket is granted explicitly too: without it, a not-yet-created state
-              # object comes back as a 403 instead of a clean 404, and terraform can't start fresh.
+              # objects don't inherit the tagging so it needs access to the actual objects 
               - Effect: Allow
                 Action:
                   - s3:ListBucket
