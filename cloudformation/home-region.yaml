@@ -151,6 +151,12 @@ Resources:
                   - ssm:*
                 Resource: !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*
 
+              # ec2 Describe* actions are read-only -- needed for terraform to plan vpcs and subnets
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                Resource: '*'
+
   # LAMBDA OPERATION ROLE - the IAM role that the Lambda function will assume
   LambdaOperationRole:
     Type: AWS::IAM::Role
