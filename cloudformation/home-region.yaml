@@ -132,7 +132,12 @@ Resources:
 
               # terraform state lives as OBJECTS in the home bucket, and objects don't
               # inherit the bucket's craftform tag -- so the tag rule above can't reach them.
-              # grant object access directly. (ListBucket still rides the tag rule, since the bucket IS tagged)
+              # ListBucket is granted explicitly too: without it, a not-yet-created state
+              # object comes back as a 403 instead of a clean 404, and terraform can't start fresh.
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub arn:aws:s3:::craftform-home-${AWS::AccountId}
               - Effect: Allow
                 Action:
                   - s3:GetObject
