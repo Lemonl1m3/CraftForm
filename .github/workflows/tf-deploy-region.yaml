@@ -52,10 +52,11 @@ jobs:
     - name: Terraform Init
       working-directory: terraform  # the directory to use
       run: |
+        # bucket = state storage | key = per-region object path | region = where the bucket lives
         terraform init -input=false -lock-timeout=60s \
-          -backend-config="bucket=${{ vars.STATE_BUCKET }}" \   # the bucket to use as a state file storage/backend
-          -backend-config="key=regions/${{ inputs.region }}/terraform.tfstate" \    # the object key to use for this
-          -backend-config="region=${{ vars.HOME_REGION }}"    # where the bucket lives (region)
+          -backend-config="bucket=${{ vars.STATE_BUCKET }}" \
+          -backend-config="key=regions/${{ inputs.region }}/terraform.tfstate" \
+          -backend-config="region=${{ vars.HOME_REGION }}"
 
     # =========================TERRAFORM PLAN=========================
 
