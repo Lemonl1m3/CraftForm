@@ -110,11 +110,14 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # ════════════ creates + tag-on-create ════════════
-              # brand-new resources have NO tags yet
-              - Effect: Allow
+              # ======================= provision =======================
+              # the create calls, plus the tag-on-create calls that ride along with them.
+              # these CAN'T be tag-scoped: a brand-new resource has no tags yet, so the
+              # "manage tagged stuff" statement below can't authorize its birth -- chicken n egg.
+              - Sid: Provision
+                Effect: Allow
                 Action:
-                  # --- s3 world-data bucket + all its settings ---
+                  # --- s3 world-data bucket + its settings ---
                   - s3:CreateBucket
                   - s3:PutBucketTagging
                   - s3:PutBucketVersioning
@@ -146,51 +149,53 @@ Resources:
                   - iam:PassRole
                 Resource: '*'
 
-              # ════════════ read-backs ════════════
-              # after a create terraform reads the resource back to populate state. s3/iam
-              # Get* aren't covered by ec2:Describe*, and a freshly-made bucket isn't tagged
-              # yet -- so the tag-scoped statement can't reach these. read-only, so safe to
-              # just allow them outright :)
-              - Effect: Allow
+              # ======================= read-only =======================
+              # every plan refreshes state by reading each resource back. tons of these are
+              # list/describe-style actions AWS only accepts on '*' (can't be tag- or arn-
+              # scoped), and freshly-made resources aren't tagged yet anyway. read-only so
+              # it's safe to allow broadly :)  -- this also covers reading the tf state object
+              # and listing the home bucket, so neither needs its own statement anymore.
+              - Sid: ReadOnly
+                Effect: Allow
                 Action:
                   - s3:Get*
-                  - s3:ListBucket
+                  - s3:List*
                   - iam:Get*
                   - iam:List*
+                  - ec2:Describe*
+                  - ssm:DescribeParameters
                 Resource: '*'
 
-              # allow modification and desctruction of anything with specific craftForm tag
-              - Effect: Allow
-                Action:
-                  - '*' # all actions
+              # ======================= manage tagged resources =======================
+              # once a resource exists and carries Project=craftform, terraform can do
+              # anything to it (modify / destroy). this is the blast-radius guard -- the role
+              # can't touch a single thing that isn't ours.
+              - Sid: ManageTaggedResources
+                Effect: Allow
+                Action: '*'
                 Resource: '*'
                 Condition:
                   StringEquals:
-                    aws:ResourceTag/Project: craftform # only allow modification and deletion of resources tagged with Project=craftForm
+                    aws:ResourceTag/Project: craftform
 
-              # objects don't inherit the tagging so it needs access to the actual objects 
-              - Effect: Allow
+              # ======================= terraform state backend =======================
+              # state lives as OBJECTS in the home bucket, and objects don't inherit the
+              # bucket's craftform tag -- so the tag statement can't reach them. the reads are
+              # already handled by ReadOnly above, so this just grants the writes.
+              - Sid: TerraformState
+                Effect: Allow
                 Action:
-                  - s3:ListBucket
-                Resource: !Sub arn:aws:s3:::craftform-home-${AWS::AccountId}
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
                   - s3:PutObject
                   - s3:DeleteObject
                 Resource: !Sub arn:aws:s3:::craftform-home-${AWS::AccountId}/regions/*
 
-              # allow full access to specific SSM parameter path for CraftForm
-              - Effect: Allow
-                Action:
-                  - ssm:*
+              # ======================= ssm params =======================
+              # write (and the rest of) the per-region config params terraform publishes.
+              # DescribeParameters is the one ssm read that needs '*', so it lives in ReadOnly.
+              - Sid: SsmParameters
+                Effect: Allow
+                Action: ssm:*
                 Resource: !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*
-
-              # ec2 Describe* actions are read-only -- needed for terraform to plan vpcs and subnets
-              - Effect: Allow
-                Action:
-                  - ec2:Describe*
-                Resource: '*'
 
   # LAMBDA OPERATION ROLE - the IAM role that the Lambda function will assume
   LambdaOperationRole:
