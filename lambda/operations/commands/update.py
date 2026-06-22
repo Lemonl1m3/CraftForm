@@ -7,7 +7,8 @@
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 import json
-import boto3
+
+from aws_clients import lambda_client  # shared client -- no need to build our own
 
 
 # ==========================================================================================
@@ -15,11 +16,8 @@ import boto3
 # ==========================================================================================
 def handle(subcommand, options, body):
 
-    # =============================AWS CLIENT=============================
-    lambdaClient = boto3.client("lambda")
-
     # ======================INVOKE STAGING FUNCTION=======================
-    lambdaClient.invoke(
+    lambda_client.invoke(
         FunctionName="craftform-staging-function",  # staging function does all the actual heavy lifting
         InvocationType="Event",  # fire-and-forget - returns immediately, we don't wait on it
         Payload=json.dumps(

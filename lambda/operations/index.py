@@ -11,15 +11,14 @@
 # ==========================================================================================
 import json
 import base64
-import boto3
 from nacl.signing import VerifyKey  # cryptographic library for verifying signatures
 
 from commands import server, template, region, update  # the actual command handlers
+from aws_clients import ssm  # shared boto3 clients -- made once per cold start
 
 # ==========================================================================================
 #                           SETUP CLIENTS AND GLOBAL VARIABLES
 # ==========================================================================================
-ssm = boto3.client("ssm")  # create the AWS SSM Parameter store client
 discord_public_key = ssm.get_parameter(Name="/craftform/config/discord/public-key")["Parameter"]["Value"]  # get the Discord public key
 
 

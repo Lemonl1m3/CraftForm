@@ -45,6 +45,7 @@ def handler(event, context):
             print(f"Failed to re-register commands: {e}")
             raise
 
+
         # ON SUCCESS
         return {"status": "commands registered :)"}  # staging only tells the user "done" once this comes back clean
 
