@@ -207,7 +207,7 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_out" {
 # ===================================IAM ROLE===================================
 # this is the role that the ec2 servers assume when created.
 resource "aws_iam_role" "server_role" {
-  name = "minecraft_server_role"
+  name = "minecraft_server_role_${var.region}" # role is tied to specific s3 bucket and since iam is global the role needs to have a unique name per region
 
   # only ec2 instances are allowed to assume this role
   assume_role_policy = jsonencode({
@@ -255,7 +255,7 @@ resource "aws_iam_role_policy" "s3_access" {
 # allows ec2 instances to actually assume the iam role
 resource "aws_iam_instance_profile" "server_profile" {
 
-  name = "minecraft_server_profile"
+  name = "minecraft_server_profile_${var.region}" # same deal -- global namespace, so suffix per-region
   role = aws_iam_role.server_role.name
 
 }
