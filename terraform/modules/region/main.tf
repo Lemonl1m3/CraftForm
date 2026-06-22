@@ -18,6 +18,9 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 6.0"
+
+      # declare that this module expects a SECOND, aliased aws provider without this, the root can't pass aws.home in -- terraform errors.
+      configuration_aliases = [aws.home]
     }
   }
 }
@@ -275,6 +278,8 @@ resource "aws_iam_role_policy_attachment" "ssm_core" {
 # ============================REGION CONFIG (SSM)=============================
 # publish this region's coordinates for the Lambda to read at runtime
 resource "aws_ssm_parameter" "region_config" {
+  provider = aws.home # write to the HOME region so the control-plane Lambda can read it
+
   name = "/craftform/regions/${var.region}/config"
   type = "String"
   value = jsonencode({

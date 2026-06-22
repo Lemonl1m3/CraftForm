@@ -8,3 +8,9 @@ variable "region" {
   type        = string
 }
 
+# ==================================HOME REGION==================================
+variable "home_region" {
+  description = "The control-plane (home) region where shared SSM config is read by the Lambda. Injected from the workflow's HOME_REGION."
+  type        = string
+}
+

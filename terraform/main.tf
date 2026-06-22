@@ -5,7 +5,7 @@
 
 
 
-
+# DEPLOYED REGION
 provider "aws" { # where Terraform should deploy to
 
   region = var.region # what region Terraform knows to deploy to
@@ -20,6 +20,18 @@ provider "aws" { # where Terraform should deploy to
 
 }
 
+# HOME REGION -- SSM is regional and this helps us keep the parameters in the home region
+provider "aws" {
+  alias  = "home"
+  region = var.home_region
+
+  default_tags {
+    tags = {
+      "Project" = "craftform"
+    }
+  }
+}
+
 
 
 module "region" {
@@ -27,5 +39,9 @@ module "region" {
 
   region = var.region # mainly for naming conventions
 
-
+  # hand the module both providers: deployed + home
+  providers = {
+    aws      = aws  # deployed region
+    aws.home = aws.home # home region
+  }
 }
