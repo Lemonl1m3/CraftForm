@@ -100,6 +100,8 @@ resource "aws_vpc" "main_vpc" {
   cidr_block = "10.0.0.0/16"
 
   enable_dns_hostnames = true # needed for ssm session manager
+
+  tags = { Name = "craftform-${var.region}-vpc" } # readable name in the console
 }
 # ==================================AWS ZONES==================================
 data "aws_availability_zones" "available" {
@@ -126,10 +128,14 @@ resource "aws_subnet" "public" {
   availability_zone       = each.key             # the name of the 'n' availability zone
   cidr_block              = each.value           # the cidr block of the 'n' availability zone
   map_public_ip_on_launch = true                 # gives resources deployed into subnet a public IP by default
+
+  tags = { Name = "craftform-public-${each.key}" } # e.g. craftform-public-us-west-2a
 }
 # =====================================IGW=====================================
 resource "aws_internet_gateway" "main_gw" {
   vpc_id = aws_vpc.main_vpc.id
+
+  tags = { Name = "craftform-${var.region}-igw" }
 }
 # =================================ROUTE TABLE=================================
 resource "aws_route_table" "main_routeTable" {
@@ -142,6 +148,7 @@ resource "aws_route_table" "main_routeTable" {
     gateway_id = aws_internet_gateway.main_gw.id
   }
 
+  tags = { Name = "craftform-${var.region}-public-rt" }
 }
 # ==============================ROUTE ASSOCIATIONS==============================
 # link every public subnet to the main route table
@@ -159,6 +166,8 @@ resource "aws_vpc_endpoint" "s3" {
   service_name      = "com.amazonaws.${var.region}.s3" # the resource for the specific region this endpoint reaches
   vpc_endpoint_type = "Gateway"
   route_table_ids   = [aws_route_table.main_routeTable.id] # the route table the endpoint gets linked to
+
+  tags = { Name = "craftform-${var.region}-s3-endpoint" }
 }
 
 #==============================================================================

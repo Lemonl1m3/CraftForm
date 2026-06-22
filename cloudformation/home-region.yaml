@@ -197,6 +197,24 @@ Resources:
                 Action: ssm:*
                 Resource: !Sub arn:aws:ssm:*:${AWS::AccountId}:parameter/craftform/*
 
+              # ======================= delete world buckets =======================
+              # s3 bucket-level actions DON'T honor aws:ResourceTag, so ManageTaggedResources
+              # above can't authorize a bucket delete (it fails closed) -- gotta grant
+              # DeleteBucket explicitly, scoped by name to the per-region world buckets.
+              - Sid: DeleteWorldBuckets
+                Effect: Allow
+                Action: s3:DeleteBucket
+                Resource: !Sub arn:aws:s3:::craftform-*-${AWS::AccountId}
+
+              # ======================= protect the state bucket =======================
+              # the home bucket matches the glob above AND is tagged craftform, so it's
+              # technically in reach of the deletes -- nuking it would destroy our own tf
+              # state. explicit Deny beats every Allow, so this slams that door shut for good.
+              - Sid: ProtectStateBucket
+                Effect: Deny
+                Action: s3:DeleteBucket
+                Resource: !Sub arn:aws:s3:::craftform-home-${AWS::AccountId}
+
   # LAMBDA OPERATION ROLE - the IAM role that the Lambda function will assume
   LambdaOperationRole:
     Type: AWS::IAM::Role
