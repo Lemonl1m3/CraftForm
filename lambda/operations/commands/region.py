@@ -121,7 +121,9 @@ def handle(subcommand, options, body):
                 "ref": "main",
                 "inputs": {
                     "region": region,
-                    "action": action
+                    "action": action,
+                    "application_id": body["application_id"],
+                    "interaction_token": body["token"]
                 }
             }).encode(),
             headers={
