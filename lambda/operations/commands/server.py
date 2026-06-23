@@ -23,7 +23,7 @@ def handle(subcommand, options, body):
                 {
                     "type": 4,  # respond immediately to the user
                     "data": {
-                        "content": "Your mum a hoe, a pretty one tho <3"  # placeholder :)
+                        "content": "Connection active :)"  # placeholder :)
                     },
                 }
             ),

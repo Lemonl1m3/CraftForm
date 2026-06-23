@@ -96,3 +96,11 @@ def handler(event, context):
 
         if command == "update":
             return update.handle(subcommand, options, body)
+
+    # ====================================ROUTE COMPONENT INTERACTIONS===================================
+    if body["type"] == 3:
+        # this splits the custom_id so i can map it to only one function and lessen the logic
+        command, subcommand = body["data"]["custom_id"].split(':')  # command = part[0] | subcommand =part[1]
+
+        if command == "region":
+            return region.handle(subcommand, [], body)

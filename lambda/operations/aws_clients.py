@@ -16,3 +16,4 @@ import boto3
 ssm           = boto3.client("ssm")             # parameter store -- config + per-region discovery
 secrets       = boto3.client("secretsmanager")  # the github PAT (for dispatching workflows)
 lambda_client = boto3.client("lambda")          # invoking other craftform functions (e.g. /update -> staging)
+ec2           = boto3.client("ec2")             # used for describe_regions to list all available AWS regions

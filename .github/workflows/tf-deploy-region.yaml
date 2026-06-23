@@ -18,8 +18,8 @@ on:
       # whether the workflow is going to create or destroy basically
       action:
         type: choice
-        options: [destroy, apply]
-        default: apply
+        options: [destroy, create]
+        default: create
 
 # CONCURRENCY - make sure two jobs in the same region don't happen at the same time and get funky
 concurrency:

@@ -79,6 +79,7 @@ def handler(event, context):
                 SecretId="craftform-secrets"
             )  # get the secret value for the secret named "craftform-secrets" from Secrets Manager
             
+            
             secrets_dict = json.loads(secrets["SecretString"])  # the secret value is a JSON string
 
             # ================================GITHUB INTEGRATION===============================
