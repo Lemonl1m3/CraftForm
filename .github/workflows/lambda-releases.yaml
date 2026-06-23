@@ -53,7 +53,7 @@ jobs:
 
       # CHECKOUT AND SETUP: check out the code
       - name: Checkout Repository 
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # PYTHON SETUP: set up python 3.12 for building the lambda code
       - name: Set up Python 
